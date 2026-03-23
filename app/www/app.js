@@ -56,6 +56,10 @@ function getBrowserPlugin() {
   return window.Capacitor?.Plugins?.Browser || window.Capacitor?.Browser || null;
 }
 
+function getLocalNotificationsPlugin() {
+  return window.Capacitor?.Plugins?.LocalNotifications || window.Capacitor?.LocalNotifications || null;
+}
+
 function hasFirebasePushConfig() {
   return Boolean(window.__HAS_FIREBASE_CONFIG__);
 }
@@ -123,6 +127,39 @@ async function openTicketUrl(gameOrUrl) {
     return;
   }
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+async function showNativeLocalNotification(alert) {
+  const localNotifications = getLocalNotificationsPlugin();
+  if (!isNativeApp() || !localNotifications?.schedule) return false;
+
+  try {
+    if (localNotifications.requestPermissions) {
+      const permission = await localNotifications.requestPermissions();
+      if (permission.display !== 'granted') {
+        setPermissionStatus('로컬 알림 권한이 허용되지 않아 시스템 알림을 표시하지 못했습니다.');
+        return false;
+      }
+    }
+
+    const ticketUrl = buildInterparkUrl(alert.ticketUrl || alert.game);
+    const id = Number(String(Date.now()).slice(-9));
+    await localNotifications.schedule({
+      notifications: [
+        {
+          id,
+          title: alert.title || '취소표 알림',
+          body: alert.message || '좌석 변동이 감지되었습니다.',
+          schedule: { at: new Date(Date.now() + 1000) },
+          extra: { ticketUrl }
+        }
+      ]
+    });
+    return true;
+  } catch (error) {
+    setPermissionStatus(`로컬 알림 표시 실패: ${error.message}`);
+    return false;
+  }
 }
 
 async function api(path, options = {}) {
@@ -337,6 +374,13 @@ function showBrowserNotification(alert) {
 
 async function ensureBrowserPermission() {
   if (isNativeApp()) {
+    const localNotifications = getLocalNotificationsPlugin();
+    if (localNotifications?.requestPermissions) {
+      const permission = await localNotifications.requestPermissions();
+      if (permission.display === 'granted') {
+        setPermissionStatus('안드로이드 로컬 알림 권한이 허용되었습니다.');
+      }
+    }
     await registerNativePush(true);
     return;
   }
@@ -603,8 +647,10 @@ function runLocalTestNotification(reason) {
   const alert = buildLocalTestAlert();
   prependAlert(alert);
   showInAppAlert(alert);
-  showBrowserNotification(alert);
-  setBackendStatus(reason);
+  showNativeLocalNotification(alert).then((shown) => {
+    if (!shown) showBrowserNotification(alert);
+  });
+  setBackendStatus(`${reason} 앱 내 카드와 시스템 알림을 함께 시도했습니다.`);
 }
 
 async function sendTestNotification() {
