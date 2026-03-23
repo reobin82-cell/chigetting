@@ -60,6 +60,16 @@ function getLocalNotificationsPlugin() {
   return window.Capacitor?.Plugins?.LocalNotifications || window.Capacitor?.LocalNotifications || null;
 }
 
+function extractNotificationTicketUrl(payload) {
+  return (
+    payload?.notification?.extra?.ticketUrl ||
+    payload?.notification?.data?.ticketUrl ||
+    payload?.extra?.ticketUrl ||
+    payload?.data?.ticketUrl ||
+    DEFAULT_TICKET_URL
+  );
+}
+
 function hasFirebasePushConfig() {
   return Boolean(window.__HAS_FIREBASE_CONFIG__);
 }
@@ -151,6 +161,7 @@ async function showNativeLocalNotification(alert) {
           title: alert.title || '취소표 알림',
           body: alert.message || '좌석 변동이 감지되었습니다.',
           schedule: { at: new Date(Date.now() + 1000) },
+          smallIcon: 'ic_launcher_foreground',
           extra: { ticketUrl }
         }
       ]
@@ -409,7 +420,9 @@ async function registerNativePush(fromButton = false) {
   }
 
   if (!hasFirebasePushConfig()) {
-    setPermissionStatus('Firebase 설정 전이라 앱 푸시는 아직 비활성화되어 있습니다.');
+    if (fromButton) {
+      setPermissionStatus('Firebase 미설정 상태입니다. 지금은 테스트용 로컬 알림만 사용할 수 있습니다.');
+    }
     return;
   }
 
@@ -450,7 +463,7 @@ async function registerNativePush(fromButton = false) {
   });
 
   push.addListener('pushNotificationActionPerformed', (event) => {
-    openTicketUrl(event.notification?.data?.ticketUrl || DEFAULT_TICKET_URL).catch(() => {});
+    openTicketUrl(extractNotificationTicketUrl(event)).catch(() => {});
   });
 
   await push.register();
@@ -464,8 +477,8 @@ function syncPermissionStatus() {
       setText(el.enableAlertsBtn, '앱 푸시 권한 허용');
       setPermissionStatus('APK에서는 브라우저 알림 대신 앱 푸시 권한을 사용합니다.');
     } else {
-      setText(el.enableAlertsBtn, '푸시 준비 중');
-      setPermissionStatus('Firebase 설정 전이라 현재는 앱 푸시를 켤 수 없습니다.');
+      setText(el.enableAlertsBtn, '알림 권한 허용');
+      setPermissionStatus('Firebase 없이도 테스트용 로컬 알림을 받을 수 있습니다.');
     }
     return;
   }
@@ -713,6 +726,13 @@ async function init() {
   el.sendTestNotificationBtn.addEventListener('click', sendTestNotification);
 
   syncPermissionStatus();
+
+  const localNotifications = getLocalNotificationsPlugin();
+  if (localNotifications?.addListener) {
+    localNotifications.addListener('localNotificationActionPerformed', (event) => {
+      openTicketUrl(extractNotificationTicketUrl(event)).catch(() => {});
+    });
+  }
 
   setBackendStatus(state.apiBase ? '배포 백엔드 연결을 준비 중입니다.' : '배포 백엔드 주소가 아직 설정되지 않았습니다.');
 
