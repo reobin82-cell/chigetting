@@ -69,7 +69,11 @@ function normalizeApiBase(value) {
 }
 
 function inferDefaultApiBase() {
-  return DEPLOYED_API_BASE;
+  if (DEPLOYED_API_BASE) return DEPLOYED_API_BASE;
+  if (!isNativeApp() && window.location.protocol.startsWith('http')) {
+    return normalizeApiBase(window.location.origin);
+  }
+  return '';
 }
 
 function setText(node, text) {

@@ -1,3 +1,3 @@
 window.__APP_CONFIG__ = {
-  apiBase: ''
+  apiBase: 'https://doosan-jamsil-alert.onrender.com'
 };
