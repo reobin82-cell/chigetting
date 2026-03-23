@@ -69,6 +69,29 @@ body {
 .match-kind { color: var(--muted); font-size: 12px; }
 .match-title { font-size: 28px; font-weight: 800; }
 .match-sub { color: var(--muted); font-size: 13px; }
+.reservation-cta {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 51, 85, 0.16), rgba(255, 202, 58, 0.12));
+  border: 1px solid rgba(255, 111, 138, 0.34);
+}
+.reservation-cta-label {
+  color: #ffbec8;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.reservation-cta-time {
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.reservation-cta-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
 .match-right { display: flex; flex-direction: column; gap: 8px; justify-content: center; align-items: flex-end; text-align: right; }
 .status-chip { display: inline-flex; align-items: center; gap: 8px; color: #9ef7c5; font-weight: 700; }
 .status-chip::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
@@ -76,6 +99,45 @@ body {
 .match-footer, .alert-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.05); }
 .monitoring-state { color: #75f6a5; font-weight: 700; }
 .meta-inline { color: var(--muted); font-size: 13px; }
+.match-footer { flex-wrap: wrap; }
+.match-footer-main {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 240px;
+}
+.reminder-panel {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+.reminder-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+.reminder-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reminder-btn {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.reminder-btn.active {
+  background: rgba(58, 139, 255, 0.16);
+  border-color: rgba(58, 139, 255, 0.64);
+  color: #dceaff;
+}
+.reminder-helper {
+  color: var(--muted);
+  font-size: 12px;
+}
 .live-alert, .settings-card, .debug-panel { padding: 16px; }
 .live-alert.empty { color: var(--muted); }
 .alert-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
@@ -120,4 +182,5 @@ body {
   .count-value, .status-value { font-size: 28px; }
   .match-title { font-size: 22px; }
   .countdown-inline { font-size: 14px; }
+  .reservation-cta-time { font-size: 20px; }
 }

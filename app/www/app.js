@@ -1,5 +1,6 @@
 ﻿const DEPLOYED_API_BASE = normalizeApiBase(window.__APP_CONFIG__?.apiBase || '');
 const DEFAULT_TICKET_URL = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004';
+const RESERVATION_REMINDER_STORAGE_KEY = 'reservation-reminder-selections-v1';
 
 const state = {
   apiBase: '',
@@ -9,6 +10,7 @@ const state = {
   alerts: [],
   health: null,
   preferredConsecutiveSeats: 2,
+  reminderSelections: {},
   nextGameTimer: null,
   interparkClockTimer: null,
   pendingAlertOpen: null
@@ -102,6 +104,15 @@ function setHtml(node, html) {
   if (node) node.innerHTML = html;
 }
 
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function setPermissionStatus(message) {
   setText(el.permissionStatus, message);
 }
@@ -158,16 +169,56 @@ function formatReservationStart(value) {
   })}`;
 }
 
+function buildExpectedReservationDate(game) {
+  if (!game?.date) return null;
+  const match = String(game.date).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const dt = new Date(Number(year), Number(month) - 1, Number(day), 11, 0, 0, 0);
+  dt.setDate(dt.getDate() - 7);
+  return dt;
+}
+
+function formatReservationStartHero(game) {
+  const dt = getReservationDate(game);
+  if (!dt) return '예매 일정 확인 중';
+  return dt.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
+function formatReservationDetail(game) {
+  const dt = getReservationDate(game);
+  if (!dt) return '예매 시간을 확인하는 중입니다.';
+  return `공식 예매 시각 · ${dt.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })}`;
+}
+
 function getReservationDate(game) {
+  const expected = buildExpectedReservationDate(game);
   if (game?.reservationStart) {
     const parsed = new Date(game.reservationStart);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
+    if (!Number.isNaN(parsed.getTime())) {
+      if (expected && Math.abs(parsed.getTime() - expected.getTime()) > 30 * 60 * 1000) {
+        return expected;
+      }
+      return parsed;
+    }
   }
 
-  if (!game?.date) return null;
-  const fallback = new Date(`${game.date}T11:00:00+09:00`);
-  fallback.setDate(fallback.getDate() - 7);
-  return fallback;
+  return expected;
 }
 
 function formatReservationDateOnly(game) {
@@ -217,6 +268,122 @@ function renderSeatOptions() {
     button.classList.toggle('active', Number(button.dataset.seatOption) === preferred);
   });
   setText(el.seatOptionHint, `${preferred}연석 이상 감지되면 알림을 보냅니다.`);
+}
+
+function loadReminderSelections() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RESERVATION_REMINDER_STORAGE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function persistReminderSelections() {
+  localStorage.setItem(RESERVATION_REMINDER_STORAGE_KEY, JSON.stringify(state.reminderSelections));
+}
+
+function getReminderKey(game) {
+  return String(game?.id || `${game?.date || ''}-${game?.time || ''}-${game?.awayTeam || ''}`);
+}
+
+function getReminderSelectionsForGame(game) {
+  const list = state.reminderSelections[getReminderKey(game)];
+  return Array.isArray(list) ? list.map(Number).filter(Number.isFinite).sort((a, b) => a - b) : [];
+}
+
+function buildReminderNotificationId(game, minutes) {
+  const source = `${getReminderKey(game)}:${minutes}`;
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    hash = ((hash << 5) - hash) + source.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash % 2000000000) + 1000;
+}
+
+function renderReminderButtons(game) {
+  const selected = new Set(getReminderSelectionsForGame(game));
+  return [5, 3, 1].map((minutes) => {
+    const activeClass = selected.has(minutes) ? 'active' : '';
+    return `<button class="reminder-btn ${activeClass}" type="button" data-game-id="${escapeHtml(getReminderKey(game))}" data-reminder-minutes="${minutes}">${minutes}분 전</button>`;
+  }).join('');
+}
+
+async function scheduleReservationReminder(game, minutes) {
+  const localNotifications = getLocalNotificationsPlugin();
+  if (!isNativeApp() || !localNotifications?.schedule) {
+    throw new Error('현재 기기에서는 예약 알림을 지원하지 않습니다.');
+  }
+
+  if (localNotifications.requestPermissions) {
+    const permission = await localNotifications.requestPermissions();
+    if (permission.display !== 'granted') {
+      throw new Error('알림 권한이 허용되지 않았습니다.');
+    }
+  }
+
+  const reservationDate = getReservationDate(game);
+  if (!reservationDate) {
+    throw new Error('예매 시작 시간을 아직 확인하지 못했습니다.');
+  }
+
+  const triggerAt = new Date(reservationDate.getTime() - (minutes * 60 * 1000));
+  if (triggerAt.getTime() <= Date.now()) {
+    throw new Error(`${minutes}분 전 알림을 설정하기에는 시간이 이미 지났습니다.`);
+  }
+
+  await localNotifications.schedule({
+    notifications: [
+      {
+        id: buildReminderNotificationId(game, minutes),
+        title: `${formatTeamName(game.awayTeam)}전 예매 ${minutes}분 전`,
+        body: `${formatReservationStartHero(game)} 예매가 곧 시작됩니다.`,
+        schedule: { at: triggerAt, allowWhileIdle: true },
+        smallIcon: 'ic_launcher_foreground',
+        extra: {
+          ticketUrl: buildInterparkUrl(game),
+          reminderMinutes: minutes,
+          gameId: getReminderKey(game)
+        }
+      }
+    ]
+  });
+}
+
+async function cancelReservationReminder(game, minutes) {
+  const localNotifications = getLocalNotificationsPlugin();
+  if (!localNotifications?.cancel) return;
+  await localNotifications.cancel({
+    notifications: [{ id: buildReminderNotificationId(game, minutes) }]
+  });
+}
+
+async function toggleReservationReminder(game, minutes) {
+  const key = getReminderKey(game);
+  const current = new Set(getReminderSelectionsForGame(game));
+  const isActive = current.has(minutes);
+
+  try {
+    if (isActive) {
+      current.delete(minutes);
+      await cancelReservationReminder(game, minutes);
+      setBackendStatus(`${formatTeamName(game.awayTeam)}전 ${minutes}분 전 알림을 해제했습니다.`);
+    } else {
+      await scheduleReservationReminder(game, minutes);
+      current.add(minutes);
+      setBackendStatus(`${formatTeamName(game.awayTeam)}전 ${minutes}분 전 알림을 설정했습니다.`);
+    }
+
+    state.reminderSelections[key] = [...current].sort((a, b) => a - b);
+    if (!state.reminderSelections[key].length) {
+      delete state.reminderSelections[key];
+    }
+    persistReminderSelections();
+    renderGames();
+  } catch (error) {
+    setBackendStatus(`예매 알림 설정 실패: ${error.message}`);
+  }
 }
 
 function syncInterparkClock(health = {}) {
@@ -358,10 +525,12 @@ function renderStats() {
 }
 
 function createGameCard(game) {
-  const reservationLabel = formatReservationStart(game.reservationStart);
+  const reservationLabel = formatReservationDetail(game);
+  const reservationHero = formatReservationStartHero(game);
   const awayTeam = formatTeamName(game.awayTeam || '');
   const homeTeam = formatTeamName(game.homeTeam || '');
   const seatPreference = Number(state.preferredConsecutiveSeats || 2);
+  const ticketUrl = buildInterparkUrl(game);
 
   return `
     <article class="match-card">
@@ -375,17 +544,28 @@ function createGameCard(game) {
           <div class="match-kind">잠실 두산 경기</div>
           <div class="match-title">${homeTeam} <span class="match-kind">vs</span> ${awayTeam}</div>
           <div class="match-sub">${formatStadiumName(game.stadium)}</div>
-          <div class="match-sub">${reservationLabel}</div>
+          <div class="reservation-cta">
+            <div class="reservation-cta-label">예매 시작</div>
+            <div class="reservation-cta-time">${reservationHero}</div>
+            <div class="reservation-cta-note">${reservationLabel}</div>
+          </div>
         </div>
         <div class="match-right">
           <div class="meta-inline">예매 링크</div>
           <div class="status-chip">감시 중</div>
-          <a class="action-link" href="${buildInterparkUrl(game)}" target="_blank" rel="noreferrer">예매하기</a>
+          <a class="action-link" href="${ticketUrl}" target="_blank" rel="noreferrer">예매하기</a>
         </div>
       </div>
       <div class="match-footer">
-        <div class="monitoring-state">${seatPreference}연석 이상 알림 중</div>
-        <button class="secondary-btn" type="button" data-open-ticket="${buildInterparkUrl(game)}">인터파크 열기</button>
+        <div class="match-footer-main">
+          <div class="monitoring-state">${seatPreference}연석 이상 알림 중</div>
+          <div class="reminder-panel">
+            <div class="reminder-title">예매 시작 알림</div>
+            <div class="reminder-group">${renderReminderButtons(game)}</div>
+            <div class="reminder-helper">선택한 시점에 앱 알림으로 알려드립니다.</div>
+          </div>
+        </div>
+        <button class="secondary-btn" type="button" data-open-ticket="${ticketUrl}">인터파크 열기</button>
       </div>
     </article>
   `;
@@ -452,14 +632,30 @@ function bindTicketButtons() {
   });
 }
 
+function bindReminderButtons() {
+  document.querySelectorAll('[data-reminder-minutes][data-game-id]').forEach((button) => {
+    button.onclick = () => {
+      const gameId = button.getAttribute('data-game-id');
+      const minutes = Number(button.getAttribute('data-reminder-minutes'));
+      const game = state.games.find((item) => getReminderKey(item) === gameId);
+      if (!game) {
+        setBackendStatus('알림을 설정할 경기 정보를 찾지 못했습니다.');
+        return;
+      }
+      toggleReservationReminder(game, minutes);
+    };
+  });
+}
+
 function renderGames() {
   const empty = '<div class="live-alert empty">백엔드에 연결되면 경기 일정이 자동으로 표시됩니다.</div>';
   const html = state.games.length ? state.games.map(createGameCard).join('') : empty;
   setText(el.monitoringSummary, `잠실 두산 경기 모니터링 (${state.games.length}경기)`);
-  setText(el.reservationRuleText, '두산 홈 경기 예매는 보통 경기 7일 전 오전 11시에 시작합니다.');
+  setText(el.reservationRuleText, '두산베어스 홈 경기 티켓은 경기 7일 전 오전 11시부터 예매가 시작됩니다. 공식 홈페이지와 인터파크, 서버 시간을 함께 확인해 주세요.');
   setHtml(el.homeGamesList, html);
   setHtml(el.scheduleList, html);
   bindTicketButtons();
+  bindReminderButtons();
 }
 
 function showInAppAlert(alert) {
@@ -885,6 +1081,7 @@ function bindTabEvents() {
 
 async function init() {
   state.apiBase = inferDefaultApiBase();
+  state.reminderSelections = loadReminderSelections();
   if (el.apiBaseInput) {
     el.apiBaseInput.value = '';
   }
