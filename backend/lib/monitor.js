@@ -37,14 +37,16 @@ function normalizeReservationDateTime(value = '') {
 
 function buildDefaultReservationStart(game) {
   if (!game?.date) return '';
-  const dt = new Date(`${game.date}T11:00:00+09:00`);
-  dt.setDate(dt.getDate() - 7);
-  const year = dt.getFullYear();
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  const hour = String(dt.getHours()).padStart(2, '0');
-  const minute = String(dt.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hour}:${minute}:00+09:00`;
+  const [year, month, day] = String(game.date).split('-').map(Number);
+  if (![year, month, day].every(Number.isFinite)) return '';
+
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  dt.setUTCDate(dt.getUTCDate() - 7);
+
+  const reservationYear = dt.getUTCFullYear();
+  const reservationMonth = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const reservationDay = String(dt.getUTCDate()).padStart(2, '0');
+  return `${reservationYear}-${reservationMonth}-${reservationDay}T11:00:00+09:00`;
 }
 
 function gameDateObject(dateString, time = '18:00') {

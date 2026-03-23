@@ -8,6 +8,7 @@ const state = {
   games: [],
   alerts: [],
   health: null,
+  preferredConsecutiveSeats: 2,
   nextGameTimer: null,
   interparkClockTimer: null,
   pendingAlertOpen: null
@@ -148,6 +149,7 @@ function formatReservationStart(value) {
   if (Number.isNaN(dt.getTime())) return pendingLabel;
 
   return `\uC608\uB9E4 \uC2DC\uC791 ${dt.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -172,6 +174,7 @@ function formatReservationDateOnly(game) {
   const dt = getReservationDate(game);
   if (!dt) return '예매 일정 확인 중';
   return dt.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -209,7 +212,7 @@ function formatAlertMessage(alert = {}) {
 }
 
 function renderSeatOptions() {
-  const preferred = Number(state.health?.preferredConsecutiveSeats || 2);
+  const preferred = Number(state.preferredConsecutiveSeats || 2);
   el.seatOptionButtons.forEach((button) => {
     button.classList.toggle('active', Number(button.dataset.seatOption) === preferred);
   });
@@ -345,7 +348,7 @@ function openAlertInsideApp(alert) {
 }
 
 function renderStats() {
-  const preferred = Number(state.health?.preferredConsecutiveSeats || 2);
+  const preferred = Number(state.preferredConsecutiveSeats || 2);
   const consecutiveAlerts = state.alerts.filter((item) => (item.seatResult?.consecutive || 0) >= preferred).length;
 
   setText(el.statPolls, String(state.games.length));
@@ -358,7 +361,7 @@ function createGameCard(game) {
   const reservationLabel = formatReservationStart(game.reservationStart);
   const awayTeam = formatTeamName(game.awayTeam || '');
   const homeTeam = formatTeamName(game.homeTeam || '');
-  const seatPreference = Number(state.health?.preferredConsecutiveSeats || 2);
+  const seatPreference = Number(state.preferredConsecutiveSeats || 2);
 
   return `
     <article class="match-card">
@@ -637,6 +640,7 @@ function syncPermissionStatus() {
 }
 function updateHealth(data) {
   state.health = data;
+  state.preferredConsecutiveSeats = Number(data.preferredConsecutiveSeats || state.preferredConsecutiveSeats || 2);
   setText(el.serverStatus, data.ok ? '정상' : '오류');
   setText(el.lastRunAt, formatDateTime(data.lastRunAt));
   setText(el.watchedGames, String(data.watchedGames || 0));
@@ -645,6 +649,8 @@ function updateHealth(data) {
   syncInterparkClock(data);
   renderSeatOptions();
   renderStats();
+  renderGames();
+  updateCountdown();
 
   if (data.lastError) setBackendStatus(`백엔드 연결됨. 최근 오류: ${data.lastError}`);
   else setBackendStatus('백엔드 연결이 정상입니다.');
@@ -782,7 +788,7 @@ async function saveApiBase() {
 }
 
 function buildLocalTestAlert() {
-  const preferred = Number(state.health?.preferredConsecutiveSeats || 2);
+  const preferred = Number(state.preferredConsecutiveSeats || 2);
   return {
     id: `${Date.now()}-local-test`,
     createdAt: new Date().toISOString(),
@@ -841,6 +847,10 @@ async function savePreferredSeatCount(count) {
   if (!Number.isFinite(value) || value < 2 || value > 4) return;
 
   try {
+    state.preferredConsecutiveSeats = value;
+    renderSeatOptions();
+    renderStats();
+    renderGames();
     await api('/api/settings', {
       method: 'POST',
       body: JSON.stringify({ preferredConsecutiveSeats: value })
