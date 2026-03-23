@@ -20,7 +20,7 @@ body {
   font-family: "Segoe UI", "Malgun Gothic", sans-serif;
 }
 
-.app-shell { max-width: 1040px; margin: 0 auto; min-height: 100vh; padding-bottom: 48px; }
+.app-shell { max-width: 1040px; margin: 0 auto; min-height: 100vh; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 48px); }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 12px 0; gap: 12px; }
 .topbar-left { display: grid; gap: 4px; }
 .mini-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -44,6 +44,7 @@ body {
 .hero-label { color: var(--red); font-weight: 800; margin-bottom: 8px; }
 .hero-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .countdown-inline { color: #ffd4da; font-size: 16px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: rgba(11, 14, 21, 0.45); }
+.hero-rule { margin-top: 10px; color: #f5c8cf; font-size: 12px; line-height: 1.5; }
 .countdown-grid, .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .count-cell, .status-card { padding: 14px 10px; text-align: center; background: rgba(11, 14, 21, 0.55); }
 .count-value, .status-value { font-size: 34px; font-weight: 900; }

@@ -35,6 +35,18 @@ function normalizeReservationDateTime(value = '') {
   return `${year}-${month}-${day}T${normalizeTime(time)}:00+09:00`;
 }
 
+function buildDefaultReservationStart(game) {
+  if (!game?.date) return '';
+  const dt = new Date(`${game.date}T11:00:00+09:00`);
+  dt.setDate(dt.getDate() - 7);
+  const year = dt.getFullYear();
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  const hour = String(dt.getHours()).padStart(2, '0');
+  const minute = String(dt.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hour}:${minute}:00+09:00`;
+}
+
 function gameDateObject(dateString, time = '18:00') {
   return new Date(`${dateString}T${normalizeTime(time)}:00+09:00`);
 }
@@ -440,9 +452,12 @@ async function loadCandidateGames(config) {
             ...game,
             goodsCode: linked.goodsCode || game.goodsCode,
             ticketUrl: linked.ticketUrl || game.ticketUrl,
-            reservationStart: linked.reservationStart || game.reservationStart || ''
+            reservationStart: linked.reservationStart || game.reservationStart || buildDefaultReservationStart(game)
           }
-        : game;
+        : {
+            ...game,
+            reservationStart: game.reservationStart || buildDefaultReservationStart(game)
+          };
     });
   }
   

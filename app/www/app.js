@@ -36,6 +36,7 @@ const el = {
   monitoringSummary: document.getElementById('monitoringSummary'),
   nextGameText: document.getElementById('nextGameText'),
   countdownInline: document.getElementById('countdownInline'),
+  reservationRuleText: document.getElementById('reservationRuleText'),
   statPolls: document.getElementById('statPolls'),
   statCancel: document.getElementById('statCancel'),
   statConsecutive: document.getElementById('statConsecutive'),
@@ -155,6 +156,30 @@ function formatReservationStart(value) {
   })}`;
 }
 
+function getReservationDate(game) {
+  if (game?.reservationStart) {
+    const parsed = new Date(game.reservationStart);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  if (!game?.date) return null;
+  const fallback = new Date(`${game.date}T11:00:00+09:00`);
+  fallback.setDate(fallback.getDate() - 7);
+  return fallback;
+}
+
+function formatReservationDateOnly(game) {
+  const dt = getReservationDate(game);
+  if (!dt) return '예매 일정 확인 중';
+  return dt.toLocaleString('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
 function formatCountdownInline(totalSeconds) {
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
@@ -194,14 +219,14 @@ function renderSeatOptions() {
 function syncInterparkClock(health = {}) {
   if (state.interparkClockTimer) clearInterval(state.interparkClockTimer);
 
-  const interparkMs = Date.parse(health.interparkServerTime || '');
-  const serverMs = Date.parse(health.serverTime || '');
-  if (!Number.isFinite(interparkMs) || !Number.isFinite(serverMs)) {
+  const interparkDate = health.interparkServerTime ? new Date(health.interparkServerTime) : null;
+  if (!interparkDate || Number.isNaN(interparkDate.getTime())) {
     setText(el.interparkServerTime, '확인 중');
     return;
   }
 
-  const offset = interparkMs - serverMs;
+  const serverDate = health.serverTime ? new Date(health.serverTime) : new Date();
+  const offset = interparkDate.getTime() - serverDate.getTime();
   const tick = () => {
     setText(el.interparkServerTime, formatDateTime(new Date(Date.now() + offset).toISOString()));
   };
@@ -428,6 +453,7 @@ function renderGames() {
   const empty = '<div class="live-alert empty">백엔드에 연결되면 경기 일정이 자동으로 표시됩니다.</div>';
   const html = state.games.length ? state.games.map(createGameCard).join('') : empty;
   setText(el.monitoringSummary, `잠실 두산 경기 모니터링 (${state.games.length}경기)`);
+  setText(el.reservationRuleText, '두산 홈 경기 예매는 보통 경기 7일 전 오전 11시에 시작합니다.');
   setHtml(el.homeGamesList, html);
   setHtml(el.scheduleList, html);
   bindTicketButtons();
@@ -463,12 +489,13 @@ function updateCountdown() {
 
   const tick = () => {
     const next = state.games
-      .map((game) => ({ game, date: getGameDate(game) }))
+      .map((game) => ({ game, date: getReservationDate(game) }))
+      .filter((item) => item.date)
       .filter((item) => item.date > new Date())
       .sort((a, b) => a.date - b.date)[0];
 
     if (!next) {
-      setText(el.nextGameText, '예정된 잠실 두산 경기가 없습니다.');
+      setText(el.nextGameText, '예정된 인터파크 예매 일정이 없습니다.');
       setText(el.countdownInline, '예매 대기 일정이 없습니다.');
       return;
     }
@@ -478,7 +505,7 @@ function updateCountdown() {
 
     setText(
       el.nextGameText,
-      `${formatTeamName(next.game.awayTeam)}전 · ${next.game.date} ${next.game.time} · ${formatReservationStart(next.game.reservationStart)}`
+      `${formatTeamName(next.game.awayTeam)}전 예매 · ${formatReservationDateOnly(next.game)} 시작`
     );
     setText(el.countdownInline, formatCountdownInline(totalSeconds));
   };
