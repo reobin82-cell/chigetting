@@ -403,6 +403,10 @@ function parseSeatAvailability(html) {
 
 function createAlert(game, seatResult) {
   const key = `${game.id}_${seatResult.consecutive}_${seatResult.total}`;
+  const opponent = game.awayTeam || game.homeTeam || '상대팀';
+  const seatLabel = seatResult.consecutive >= 2
+    ? `${seatResult.consecutive}연석 확인`
+    : `좌석 ${seatResult.total}석 확인`;
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     key,
@@ -410,9 +414,9 @@ function createAlert(game, seatResult) {
     game,
     seatResult,
     title: seatResult.consecutive >= 2
-      ? `Doosan Jamsil game ${seatResult.consecutive} seats found`
-      : 'Doosan Jamsil ticket opened',
-    message: `${game.date} ${game.time} ${game.homeTeam} vs ${game.awayTeam} 쨌 ${seatResult.desc}`,
+      ? `${seatResult.consecutive}연석 감지`
+      : '취소표 알림',
+    message: `${game.date} ${game.time} ${opponent}전 · ${seatLabel}`,
     ticketUrl: game.ticketUrl || DEFAULT_GAME_URL
   };
 }
@@ -431,17 +435,19 @@ async function loadCandidateGames(config) {
       ticketGames.find((candidate) => candidate.date === game.date) ||
       null;
 
-    return linked
-      ? {
-          ...game,
-          goodsCode: linked.goodsCode || game.goodsCode,
-          ticketUrl: linked.ticketUrl || game.ticketUrl
-        }
-      : game;
-  });
-}
-
+      return linked
+        ? {
+            ...game,
+            goodsCode: linked.goodsCode || game.goodsCode,
+            ticketUrl: linked.ticketUrl || game.ticketUrl,
+            reservationStart: linked.reservationStart || game.reservationStart || ''
+          }
+        : game;
+    });
+  }
+  
 async function runMonitorCycle(config, state, hooks = {}) {
+  const preferredConsecutiveSeats = Number(config.preferredConsecutiveSeats || 2);
   const games = filterTargetGames(await loadCandidateGames(config), config.daysAhead || 21)
     .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
     .slice(0, config.maxConcurrentGames || 8);
@@ -458,10 +464,11 @@ async function runMonitorCycle(config, state, hooks = {}) {
         timeoutMs: 7000
       });
 
-      const seatResult = parseSeatAvailability(html);
-      if (!seatResult) continue;
+        const seatResult = parseSeatAvailability(html);
+        if (!seatResult) continue;
+        if ((seatResult.consecutive || 0) < preferredConsecutiveSeats) continue;
 
-      const alert = createAlert(game, seatResult);
+        const alert = createAlert(game, seatResult);
       if (state.sentKeys[alert.key] && state.sentKeys[alert.key] >= seatResult.total) continue;
 
       state.sentKeys[alert.key] = seatResult.total;

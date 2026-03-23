@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { readState, writeState, ensureStateFile } = require('./lib/storage');
@@ -17,6 +17,7 @@ config.port = Number(process.env.PORT || config.port || 8787);
 config.monitorIntervalSec = Number(process.env.MONITOR_INTERVAL_SEC || config.monitorIntervalSec || 20);
 config.daysAhead = Number(process.env.DAYS_AHEAD || config.daysAhead || 21);
 config.maxConcurrentGames = Number(process.env.MAX_CONCURRENT_GAMES || config.maxConcurrentGames || 8);
+config.preferredConsecutiveSeats = Number(process.env.PREFERRED_CONSECUTIVE_SEATS || config.preferredConsecutiveSeats || 2);
 config.kboEndpoint = process.env.KBO_ENDPOINT || config.kboEndpoint;
 config.teamTicketUrl = process.env.TEAM_TICKET_URL || config.teamTicketUrl;
 config.defaultGameUrl = process.env.DEFAULT_GAME_URL || config.defaultGameUrl;
@@ -28,6 +29,7 @@ ensureStateFile(config.dataFile);
 const clients = new Set();
 let running = false;
 let lastGames = [];
+let lastInterparkServerTime = '';
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -96,6 +98,26 @@ async function monitorOnce(trigger = 'manual') {
   }
 }
 
+async function fetchInterparkServerTime() {
+  const now = Date.now();
+  if (lastInterparkServerTime && fetchInterparkServerTime.lastFetchedAt && now - fetchInterparkServerTime.lastFetchedAt < 15000) {
+    return lastInterparkServerTime;
+  }
+
+  const response = await fetch(config.teamTicketUrl || config.defaultGameUrl, {
+    method: 'HEAD',
+    headers: {
+      'User-Agent': 'Mozilla/5.0',
+      Accept: 'text/html,application/xhtml+xml'
+    }
+  });
+
+  const header = response.headers.get('date');
+  lastInterparkServerTime = header ? new Date(header).toISOString() : '';
+  fetchInterparkServerTime.lastFetchedAt = now;
+  return lastInterparkServerTime;
+}
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -129,13 +151,22 @@ const server = http.createServer(async (req, res) => {
 
   if (req.url === '/api/health' && req.method === 'GET') {
     const state = readState(config.dataFile);
+    let interparkServerTime = lastInterparkServerTime;
+    try {
+      interparkServerTime = await fetchInterparkServerTime();
+    } catch (error) {
+      interparkServerTime = lastInterparkServerTime;
+    }
     sendJson(res, 200, {
       ok: true,
       running,
+      serverTime: new Date().toISOString(),
+      interparkServerTime,
       lastRunAt: state.lastRunAt,
       lastError: state.lastError,
       watchedGames: lastGames.length,
-      alerts: state.alerts.length
+      alerts: state.alerts.length,
+      preferredConsecutiveSeats: config.preferredConsecutiveSeats
     });
     return;
   }
@@ -191,6 +222,9 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       if (typeof body.monitorIntervalSec === 'number') config.monitorIntervalSec = body.monitorIntervalSec;
       if (typeof body.daysAhead === 'number') config.daysAhead = body.daysAhead;
+      if (typeof body.preferredConsecutiveSeats === 'number') {
+        config.preferredConsecutiveSeats = Math.max(2, Math.min(4, Math.floor(body.preferredConsecutiveSeats)));
+      }
       sendJson(res, 200, { ok: true, config });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
@@ -201,12 +235,13 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/api/test/alert' && req.method === 'POST') {
     try {
       const state = readState(config.dataFile);
+      const preferredSeats = Number(config.preferredConsecutiveSeats || 2);
       const alert = {
         id: `${Date.now()}-test`,
         key: `test_${Date.now()}`,
         createdAt: new Date().toISOString(),
-        title: '테스트 취소표 알림',
-        message: '알림 클릭 시 인터파크 예매 화면으로 이동합니다.',
+        title: '로컬 테스트 알림',
+        message: '알림을 눌러 앱 내부 알림 화면으로 이동해 보세요.',
         ticketUrl: config.defaultGameUrl,
         game: {
           date: new Date().toISOString().slice(0, 10),
@@ -216,11 +251,11 @@ const server = http.createServer(async (req, res) => {
           stadium: '잠실야구장'
         },
         seatResult: {
-          total: 2,
-          consecutive: 2,
+          total: preferredSeats,
+          consecutive: preferredSeats,
           confirmed: true,
           numStr: '101-102',
-          desc: '2연석 가능'
+          desc: `${preferredSeats}연석 가능`
         }
       };
       state.alerts.unshift(alert);

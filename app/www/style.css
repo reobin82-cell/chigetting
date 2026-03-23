@@ -21,7 +21,9 @@ body {
 }
 
 .app-shell { max-width: 1040px; margin: 0 auto; min-height: 100vh; padding-bottom: 48px; }
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 0; }
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 12px 0; gap: 12px; }
+.topbar-left { display: grid; gap: 4px; }
+.mini-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .mini-label, .section-title, .status-label, .count-label, .helper-text, .input-label { color: var(--muted); font-size: 12px; }
 .mini-value, .topbar-link { color: #80b8ff; font-size: 13px; }
 .topbar-link { background: none; border: none; cursor: pointer; }
@@ -41,6 +43,7 @@ body {
 .hero-card { padding: 16px; background: linear-gradient(180deg, rgba(91, 0, 18, 0.88), rgba(44, 12, 20, 0.92)); border-color: rgba(255, 58, 88, 0.55); }
 .hero-label { color: var(--red); font-weight: 800; margin-bottom: 8px; }
 .hero-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.countdown-inline { color: #ffd4da; font-size: 16px; font-weight: 700; padding: 12px 14px; border-radius: 14px; background: rgba(11, 14, 21, 0.45); }
 .countdown-grid, .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .count-cell, .status-card { padding: 14px 10px; text-align: center; background: rgba(11, 14, 21, 0.55); }
 .count-value, .status-value { font-size: 34px; font-weight: 900; }
@@ -81,6 +84,22 @@ body {
 .primary-btn { background: var(--red); color: white; }
 .secondary-btn { background: transparent; color: var(--text); border-color: var(--line); }
 .settings-card.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.seat-selector { display: grid; gap: 10px; margin-top: 12px; }
+.seat-option-list { display: flex; gap: 10px; flex-wrap: wrap; }
+.seat-option-btn {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.seat-option-btn.active {
+  background: rgba(255, 51, 85, 0.14);
+  border-color: rgba(255, 51, 85, 0.7);
+  color: #ffd8df;
+}
 .settings-card input { width: 100%; margin: 8px 0 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: #0d1220; color: var(--text); }
 .debug-panel { display: grid; gap: 12px; }
 .debug-row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
@@ -99,4 +118,5 @@ body {
   .tab-btn { font-size: 12px; padding-left: 2px; padding-right: 2px; }
   .count-value, .status-value { font-size: 28px; }
   .match-title { font-size: 22px; }
+  .countdown-inline { font-size: 14px; }
 }
