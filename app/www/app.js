@@ -306,7 +306,8 @@ function renderReminderButtons(game) {
   const selected = new Set(getReminderSelectionsForGame(game));
   return [5, 3, 1].map((minutes) => {
     const activeClass = selected.has(minutes) ? 'active' : '';
-    return `<button class="reminder-btn ${activeClass}" type="button" data-game-id="${escapeHtml(getReminderKey(game))}" data-reminder-minutes="${minutes}">${minutes}분 전</button>`;
+    const label = selected.has(minutes) ? `${minutes}분 전 ✓` : `${minutes}분 전`;
+    return `<button class="reminder-btn ${activeClass}" type="button" data-game-id="${escapeHtml(getReminderKey(game))}" data-reminder-minutes="${minutes}">${label}</button>`;
   }).join('');
 }
 

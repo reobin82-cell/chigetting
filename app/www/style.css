@@ -130,9 +130,10 @@ body {
   cursor: pointer;
 }
 .reminder-btn.active {
-  background: rgba(58, 139, 255, 0.16);
-  border-color: rgba(58, 139, 255, 0.64);
-  color: #dceaff;
+  background: linear-gradient(135deg, rgba(58, 139, 255, 0.34), rgba(122, 189, 255, 0.18));
+  border-color: rgba(110, 182, 255, 0.88);
+  color: #f4fbff;
+  box-shadow: 0 0 0 1px rgba(110, 182, 255, 0.22) inset;
 }
 .reminder-helper {
   color: var(--muted);
