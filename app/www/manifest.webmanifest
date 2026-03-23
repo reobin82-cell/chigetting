@@ -1,0 +1,9 @@
+{
+  "name": "취겟팅",
+  "short_name": "취겟팅",
+  "display": "standalone",
+  "start_url": "./index.html",
+  "background_color": "#0a0d14",
+  "theme_color": "#10141f",
+  "icons": []
+}

@@ -1,0 +1,16 @@
+node_modules/
+.gradle/
+android-sdk/
+tools/
+backend/config.json
+backend/data/state.json
+app/android/.gradle/
+app/android/local.properties
+app/android/app/build/
+app/android/build/
+app/android/captures/
+app/node_modules/
+*.apk
+*.keystore
+*.jks
+*.log

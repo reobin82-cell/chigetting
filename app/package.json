@@ -1,0 +1,17 @@
+{
+  "name": "doosan-jamsil-alert-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor-ready packaged app shell for Doosan Jamsil alerts",
+  "scripts": {
+    "serve": "npx http-server ./www -p 5173",
+    "android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/browser": "^8.0.2",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/push-notifications": "^8.0.2"
+  }
+}

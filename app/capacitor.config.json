@@ -1,0 +1,9 @@
+{
+  "appId": "com.stans.doosanjamsilalert",
+  "appName": "취겟팅",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

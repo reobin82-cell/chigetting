@@ -1,0 +1,12 @@
+{
+  "port": 8787,
+  "monitorIntervalSec": 20,
+  "daysAhead": 21,
+  "maxConcurrentGames": 8,
+  "kboEndpoint": "https://www.koreabaseball.com/ws/Schedule.asmx/GetSchedule",
+  "teamTicketUrl": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004",
+  "defaultGameUrl": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004",
+  "pushProvider": "none",
+  "fcmServerKey": "",
+  "dataFile": "./backend/data/state.json"
+}
