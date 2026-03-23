@@ -549,6 +549,11 @@ function createGameCard(game) {
             <div class="reservation-cta-label">예매 시작</div>
             <div class="reservation-cta-time">${reservationHero}</div>
             <div class="reservation-cta-note">${reservationLabel}</div>
+            <div class="reminder-panel in-cta">
+              <div class="reminder-title">예매 시작 알림</div>
+              <div class="reminder-group">${renderReminderButtons(game)}</div>
+              <div class="reminder-helper">선택한 시점에 앱 알림으로 알려드립니다.</div>
+            </div>
           </div>
         </div>
         <div class="match-right">
@@ -560,11 +565,7 @@ function createGameCard(game) {
       <div class="match-footer">
         <div class="match-footer-main">
           <div class="monitoring-state">${seatPreference}연석 이상 알림 중</div>
-          <div class="reminder-panel">
-            <div class="reminder-title">예매 시작 알림</div>
-            <div class="reminder-group">${renderReminderButtons(game)}</div>
-            <div class="reminder-helper">선택한 시점에 앱 알림으로 알려드립니다.</div>
-          </div>
+          <div class="reminder-helper">취소표 감시는 공식 예매 시작 시각부터 진행합니다.</div>
         </div>
         <button class="secondary-btn" type="button" data-open-ticket="${ticketUrl}">인터파크 열기</button>
       </div>

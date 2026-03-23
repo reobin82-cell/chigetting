@@ -92,6 +92,11 @@ body {
   color: var(--muted);
   font-size: 12px;
 }
+.reminder-panel.in-cta {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
 .match-right { display: flex; flex-direction: column; gap: 8px; justify-content: center; align-items: flex-end; text-align: right; }
 .status-chip { display: inline-flex; align-items: center; gap: 8px; color: #9ef7c5; font-weight: 700; }
 .status-chip::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
