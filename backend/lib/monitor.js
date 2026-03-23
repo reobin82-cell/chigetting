@@ -297,6 +297,42 @@ async function fetchOfficialScheduleMonth(targetYm) {
   return parseOfficialScheduleRows(html);
 }
 
+async function fetchOfficialScheduleWindow() {
+  const baseUrl = 'https://eng.koreabaseball.com/Schedule/DailySchedule.aspx';
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    Accept: 'text/html,application/xhtml+xml'
+  };
+
+  let html = await fetchText(baseUrl, { headers, timeoutMs: 8000 });
+  const months = [parseOfficialScheduleRows(html)];
+
+  const form = new URLSearchParams({
+    __EVENTTARGET: '',
+    __EVENTARGUMENT: '',
+    __VIEWSTATE: parseHiddenField(html, '__VIEWSTATE'),
+    __VIEWSTATEGENERATOR: parseHiddenField(html, '__VIEWSTATEGENERATOR'),
+    __EVENTVALIDATION: parseHiddenField(html, '__EVENTVALIDATION'),
+    'ctl00$ctl00$ctl00$ctl00$cphContainer$cphContainer$cphContent$cphContent$hdTeamCD': '',
+    'ctl00$ctl00$ctl00$ctl00$cphContainer$cphContainer$cphContent$cphContent$btnNext.x': '10',
+    'ctl00$ctl00$ctl00$ctl00$cphContainer$cphContainer$cphContent$cphContent$btnNext.y': '10'
+  });
+
+  html = await fetchText(baseUrl, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Referer: baseUrl
+    },
+    body: form.toString(),
+    timeoutMs: 8000
+  });
+  months.push(parseOfficialScheduleRows(html));
+
+  return uniqueGames(months.flat());
+}
+
 function filterTargetGames(games, daysAhead) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -371,15 +407,7 @@ function createAlert(game, seatResult) {
 }
 
 async function loadCandidateGames(config) {
-  const now = new Date();
-  const currentMonth = [now.getFullYear(), now.getMonth() + 1];
-  const nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const nextMonth = [nextDate.getFullYear(), nextDate.getMonth() + 1];
-
-  const officialGames = await Promise.all([
-    fetchOfficialScheduleMonth(`${currentMonth[0]}-${String(currentMonth[1]).padStart(2, '0')}`),
-    fetchOfficialScheduleMonth(`${nextMonth[0]}-${String(nextMonth[1]).padStart(2, '0')}`)
-  ]).then((items) => uniqueGames(items.flat()));
+  const officialGames = await fetchOfficialScheduleWindow();
 
   const ticketGames = await fetchTeamTicketSchedule(config).catch(() => []);
   const ticketMap = new Map(
