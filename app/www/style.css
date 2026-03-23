@@ -26,7 +26,7 @@ body {
 .mini-value, .topbar-link { color: #80b8ff; font-size: 13px; }
 .topbar-link { background: none; border: none; cursor: pointer; }
 
-.tabbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
+.tabbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px 8px 0; border-bottom: 1px solid var(--line); }
 .tab-btn { background: none; color: var(--muted); border: none; padding: 14px 6px 12px; border-bottom: 2px solid transparent; cursor: pointer; font-weight: 700; }
 .tab-btn.active { color: var(--text); border-bottom-color: var(--red); }
 .page { display: none; padding: 10px 8px 0; }
@@ -40,7 +40,7 @@ body {
 
 .hero-card { padding: 16px; background: linear-gradient(180deg, rgba(91, 0, 18, 0.88), rgba(44, 12, 20, 0.92)); border-color: rgba(255, 58, 88, 0.55); }
 .hero-label { color: var(--red); font-weight: 800; margin-bottom: 8px; }
-.hero-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; }
+.hero-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .countdown-grid, .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .count-cell, .status-card { padding: 14px 10px; text-align: center; background: rgba(11, 14, 21, 0.55); }
 .count-value, .status-value { font-size: 34px; font-weight: 900; }
@@ -95,7 +95,7 @@ body {
 }
 
 @media (max-width: 520px) {
-  .tabbar { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .tabbar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tab-btn { font-size: 12px; padding-left: 2px; padding-right: 2px; }
   .count-value, .status-value { font-size: 28px; }
   .match-title { font-size: 22px; }

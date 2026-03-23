@@ -8,7 +8,8 @@ const state = {
   games: [],
   alerts: [],
   health: null,
-  nextGameTimer: null
+  nextGameTimer: null,
+  pendingAlertOpen: null
 };
 
 const el = {
@@ -201,6 +202,22 @@ function prependAlert(alert) {
   state.alerts = state.alerts.slice(0, 50);
   renderAlerts();
   renderStats();
+}
+
+function buildNotificationAlert(payload) {
+  return {
+    title: payload?.notification?.title || payload?.title || '취소표 알림',
+    message: payload?.notification?.body || payload?.body || '앱 안에서 알림 내용을 확인해 주세요.',
+    createdAt: new Date().toISOString(),
+    ticketUrl: extractNotificationTicketUrl(payload)
+  };
+}
+
+function openAlertInsideApp(alert) {
+  prependAlert(alert);
+  showInAppAlert(alert);
+  setActiveTab('alerts');
+  setBackendStatus('알림을 눌러 앱 내부 알림 화면으로 이동했습니다.');
 }
 
 function renderStats() {
@@ -463,7 +480,7 @@ async function registerNativePush(fromButton = false) {
   });
 
   push.addListener('pushNotificationActionPerformed', (event) => {
-    openTicketUrl(extractNotificationTicketUrl(event)).catch(() => {});
+    openAlertInsideApp(buildNotificationAlert(event));
   });
 
   await push.register();
@@ -730,7 +747,7 @@ async function init() {
   const localNotifications = getLocalNotificationsPlugin();
   if (localNotifications?.addListener) {
     localNotifications.addListener('localNotificationActionPerformed', (event) => {
-      openTicketUrl(extractNotificationTicketUrl(event)).catch(() => {});
+      openAlertInsideApp(buildNotificationAlert(event));
     });
   }
 
