@@ -1,4 +1,4 @@
-const DEFAULT_GAME_URL = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004';
+﻿const DEFAULT_GAME_URL = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004';
 const DOOSAN_PATTERN = /(?:Doosan|Bears|\uB450\uC0B0)/i;
 const JAMSIL_PATTERN = /(?:Jamsil|\uC7A0\uC2E4)/i;
 
@@ -25,6 +25,14 @@ function normalizeTime(timeString = '') {
     return value.padStart(5, '0');
   }
   return '18:00';
+}
+
+function normalizeReservationDateTime(value = '') {
+  const text = String(value).trim();
+  const match = text.match(/(\d{4})[.\-/](\d{2})[.\-/](\d{2}).*?(\d{1,2}:\d{2})/);
+  if (!match) return '';
+  const [, year, month, day, time] = match;
+  return `${year}-${month}-${day}T${normalizeTime(time)}:00+09:00`;
 }
 
 function gameDateObject(dateString, time = '18:00') {
@@ -141,6 +149,8 @@ function parseAnchorGames(html) {
     const href = match[1].startsWith('http') ? match[1] : `https://ticket.interpark.com${match[1]}`;
     const goodsCode = match[2];
     const date = normalizeDate(match[3]);
+    const block = match[0];
+    const reservationStart = normalizeReservationDateTime((block.match(/\uC2DC\uC791\s*\uC77C\uC2DC\s*([^\r\n<]+)/i) || [])[1] || '');
 
     return {
       id: goodsCode || `${date}-doosan-interpark`,
@@ -150,7 +160,8 @@ function parseAnchorGames(html) {
       homeTeam: 'Doosan Bears',
       awayTeam: '',
       stadium: 'Jamsil Baseball Stadium',
-      ticketUrl: href
+      ticketUrl: href,
+      reservationStart
     };
   });
 }
@@ -355,7 +366,7 @@ function parseSeatAvailability(html) {
 
   const totalMatch =
     html.match(/(?:\uC794\uC5EC|remain|available)[^0-9]{0,20}(\d+)/i) ||
-    html.match(/(?:seat|좌석)[^0-9]{0,20}(\d+)/i);
+    html.match(/(?:seat|醫뚯꽍)[^0-9]{0,20}(\d+)/i);
 
   const seatNumbers = [...html.matchAll(/(?:seatNo|seat_num|\uC88C\uC11D)[^0-9]{0,20}(\d{1,3})/gi)]
     .map((match) => Number(match[1]))
@@ -401,7 +412,7 @@ function createAlert(game, seatResult) {
     title: seatResult.consecutive >= 2
       ? `Doosan Jamsil game ${seatResult.consecutive} seats found`
       : 'Doosan Jamsil ticket opened',
-    message: `${game.date} ${game.time} ${game.homeTeam} vs ${game.awayTeam} · ${seatResult.desc}`,
+    message: `${game.date} ${game.time} ${game.homeTeam} vs ${game.awayTeam} 쨌 ${seatResult.desc}`,
     ticketUrl: game.ticketUrl || DEFAULT_GAME_URL
   };
 }
@@ -479,3 +490,4 @@ module.exports = {
   parseSeatAvailability,
   runMonitorCycle
 };
+

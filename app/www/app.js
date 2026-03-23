@@ -1,4 +1,4 @@
-const DEPLOYED_API_BASE = normalizeApiBase(window.__APP_CONFIG__?.apiBase || '');
+﻿const DEPLOYED_API_BASE = normalizeApiBase(window.__APP_CONFIG__?.apiBase || '');
 const DEFAULT_TICKET_URL = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004';
 
 const state = {
@@ -111,6 +111,22 @@ function formatDateTime(value) {
   return value ? new Date(value).toLocaleString('ko-KR') : '-';
 }
 
+function formatReservationStart(value) {
+  const pendingLabel = '\uC608\uB9E4 \uC2DC\uAC04 \uD655\uC778 \uC911';
+  if (!value) return pendingLabel;
+
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return pendingLabel;
+
+  return `\uC608\uB9E4 \uC2DC\uC791 ${dt.toLocaleString('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })}`;
+}
+
 function getGameDate(game) {
   return new Date(`${game.date}T${game.time || '18:00'}:00+09:00`);
 }
@@ -148,7 +164,7 @@ async function showNativeLocalNotification(alert) {
     if (localNotifications.requestPermissions) {
       const permission = await localNotifications.requestPermissions();
       if (permission.display !== 'granted') {
-        setPermissionStatus('로컬 알림 권한이 허용되지 않아 시스템 알림을 표시하지 못했습니다.');
+        setPermissionStatus('濡쒖뺄 ?뚮┝ 沅뚰븳???덉슜?섏? ?딆븘 ?쒖뒪???뚮┝???쒖떆?섏? 紐삵뻽?듬땲??');
         return false;
       }
     }
@@ -159,8 +175,8 @@ async function showNativeLocalNotification(alert) {
       notifications: [
         {
           id,
-          title: alert.title || '취소표 알림',
-          body: alert.message || '좌석 변동이 감지되었습니다.',
+          title: alert.title || '痍⑥냼???뚮┝',
+          body: alert.message || '醫뚯꽍 蹂?숈씠 媛먯??섏뿀?듬땲??',
           schedule: { at: new Date(Date.now() + 1000) },
           smallIcon: 'ic_launcher_foreground',
           extra: { ticketUrl }
@@ -169,14 +185,14 @@ async function showNativeLocalNotification(alert) {
     });
     return true;
   } catch (error) {
-    setPermissionStatus(`로컬 알림 표시 실패: ${error.message}`);
+    setPermissionStatus(`濡쒖뺄 ?뚮┝ ?쒖떆 ?ㅽ뙣: ${error.message}`);
     return false;
   }
 }
 
 async function api(path, options = {}) {
   if (!state.apiBase) {
-    throw new Error('백엔드 연결 정보가 설정되지 않았습니다.');
+    throw new Error('諛깆뿏???곌껐 ?뺣낫媛 ?ㅼ젙?섏? ?딆븯?듬땲??');
   }
   const response = await fetch(`${state.apiBase}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -206,8 +222,8 @@ function prependAlert(alert) {
 
 function buildNotificationAlert(payload) {
   return {
-    title: payload?.notification?.title || payload?.title || '취소표 알림',
-    message: payload?.notification?.body || payload?.body || '앱 안에서 알림 내용을 확인해 주세요.',
+    title: payload?.notification?.title || payload?.title || '痍⑥냼???뚮┝',
+    message: payload?.notification?.body || payload?.body || '???덉뿉???뚮┝ ?댁슜???뺤씤??二쇱꽭??',
     createdAt: new Date().toISOString(),
     ticketUrl: extractNotificationTicketUrl(payload)
   };
@@ -217,7 +233,7 @@ function openAlertInsideApp(alert) {
   prependAlert(alert);
   showInAppAlert(alert);
   setActiveTab('alerts');
-  setBackendStatus('알림을 눌러 앱 내부 알림 화면으로 이동했습니다.');
+  setBackendStatus('?뚮┝???뚮윭 ???대? ?뚮┝ ?붾㈃?쇰줈 ?대룞?덉뒿?덈떎.');
 }
 
 function renderStats() {
@@ -232,6 +248,8 @@ function renderStats() {
 }
 
 function createGameCard(game) {
+  const reservationLabel = formatReservationStart(game.reservationStart);
+
   return `
     <article class="match-card">
       <div class="match-main">
@@ -241,27 +259,28 @@ function createGameCard(game) {
           <div class="game-time">${game.time || '18:00'}</div>
         </div>
         <div class="match-center">
-          <div class="match-kind">잠실 두산 경기</div>
+          <div class="match-kind">?좎떎 ?먯궛 寃쎄린</div>
           <div class="match-title">${game.homeTeam} <span class="match-kind">vs</span> ${game.awayTeam}</div>
           <div class="match-sub">${game.stadium}</div>
+          <div class="match-sub">${reservationLabel}</div>
         </div>
         <div class="match-right">
-          <div class="meta-inline">예매 링크</div>
-          <div class="status-chip">모니터링 중</div>
-          <a class="action-link" href="${buildInterparkUrl(game)}" target="_blank" rel="noreferrer">예매하기</a>
+          <div class="meta-inline">?덈ℓ 留곹겕</div>
+          <div class="status-chip">紐⑤땲?곕쭅 以?/div>
+          <a class="action-link" href="${buildInterparkUrl(game)}" target="_blank" rel="noreferrer">?덈ℓ?섍린</a>
         </div>
       </div>
       <div class="match-footer">
-        <div class="monitoring-state">취소표 감시 대기</div>
-        <button class="secondary-btn" type="button" data-open-ticket="${buildInterparkUrl(game)}">인터파크 열기</button>
+        <div class="monitoring-state">痍⑥냼??媛먯떆 ?湲?/div>
+        <button class="secondary-btn" type="button" data-open-ticket="${buildInterparkUrl(game)}">?명꽣?뚰겕 ?닿린</button>
       </div>
     </article>
   `;
 }
 
 function createAlertCard(alert, compact = false) {
-  const title = alert.title || '취소표 알림';
-  const message = alert.message || '좌석 변동이 감지되었습니다.';
+  const title = alert.title || '痍⑥냼???뚮┝';
+  const message = alert.message || '醫뚯꽍 蹂?숈씠 媛먯??섏뿀?듬땲??';
   const ticketUrl = buildInterparkUrl(alert.ticketUrl || alert.game);
   const timeLabel = formatDateTime(alert.createdAt);
 
@@ -271,21 +290,21 @@ function createAlertCard(alert, compact = false) {
         <div class="alert-main">
           <div class="match-date">
             <div class="weekday">${timeLabel}</div>
-            <div class="alert-tag">최근 알림</div>
+            <div class="alert-tag">理쒓렐 ?뚮┝</div>
           </div>
           <div class="match-center">
             <div class="alert-title">${title}</div>
             <div class="alert-message">${message}</div>
           </div>
           <div class="match-right">
-            <a class="action-link" href="${ticketUrl}" target="_blank" rel="noreferrer">인터파크 바로가기</a>
+            <a class="action-link" href="${ticketUrl}" target="_blank" rel="noreferrer">?명꽣?뚰겕 諛붾줈媛湲?/a>
           </div>
         </div>
       </article>
     `;
   }
 
-  const seatTag = (alert.seatResult?.consecutive || 0) >= 2 ? '연석 감지' : '취소표 감지';
+  const seatTag = (alert.seatResult?.consecutive || 0) >= 2 ? '?곗꽍 媛먯?' : '痍⑥냼??媛먯?';
   return `
     <article class="alert-card">
       <div class="alert-main">
@@ -298,13 +317,13 @@ function createAlertCard(alert, compact = false) {
           <div class="alert-message">${message}</div>
         </div>
         <div class="match-right">
-          <div class="meta-inline">알림 즉시 접속</div>
-          <a class="action-link" href="${ticketUrl}" target="_blank" rel="noreferrer">인터파크 열기</a>
+          <div class="meta-inline">?뚮┝ 利됱떆 ?묒냽</div>
+          <a class="action-link" href="${ticketUrl}" target="_blank" rel="noreferrer">?명꽣?뚰겕 ?닿린</a>
         </div>
       </div>
       <div class="alert-footer">
         <div class="meta-inline">${alert.game?.date || ''} ${alert.game?.time || ''}</div>
-        <button class="secondary-btn" type="button" data-open-ticket="${ticketUrl}">예매 화면 보기</button>
+        <button class="secondary-btn" type="button" data-open-ticket="${ticketUrl}">?덈ℓ ?붾㈃ 蹂닿린</button>
       </div>
     </article>
   `;
@@ -319,9 +338,9 @@ function bindTicketButtons() {
 }
 
 function renderGames() {
-  const empty = '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>';
+  const empty = '<div class="live-alert empty">諛깆뿏?쒖뿉 ?곌껐?섏뼱??寃쎄린 ?쇱젙???먮룞?쇰줈 ?쒖떆?⑸땲??</div>';
   const html = state.games.length ? state.games.map(createGameCard).join('') : empty;
-  setText(el.monitoringSummary, `잠실 두산 경기 모니터링 (${state.games.length}경기)`);
+  setText(el.monitoringSummary, `?좎떎 ?먯궛 寃쎄린 紐⑤땲?곕쭅 (${state.games.length}寃쎄린)`);
   setHtml(el.homeGamesList, html);
   setHtml(el.scheduleList, html);
   bindTicketButtons();
@@ -331,19 +350,19 @@ function showInAppAlert(alert) {
   const ticketUrl = buildInterparkUrl(alert.ticketUrl || alert.game);
   el.liveAlert?.classList.remove('empty');
   setHtml(el.liveAlert, `
-    <div class="alert-title">${alert.title || '취소표 알림'}</div>
-    <div class="alert-message">${alert.message || '좌석 변동이 감지되었습니다.'}</div>
+    <div class="alert-title">${alert.title || '痍⑥냼???뚮┝'}</div>
+    <div class="alert-message">${alert.message || '醫뚯꽍 蹂?숈씠 媛먯??섏뿀?듬땲??'}</div>
     <div class="alert-footer">
       <div class="meta-inline">${formatDateTime(alert.createdAt)}</div>
-      <button class="primary-btn" type="button" data-open-ticket="${ticketUrl}">인터파크 바로 접속</button>
+      <button class="primary-btn" type="button" data-open-ticket="${ticketUrl}">?명꽣?뚰겕 諛붾줈 ?묒냽</button>
     </div>
   `);
   bindTicketButtons();
 }
 
 function renderAlerts() {
-  const emptyMain = '<div class="live-alert empty">아직 발생한 취소표 알림이 없습니다.</div>';
-  const emptyRecent = '<div class="live-alert empty">최근 알림이 없습니다.</div>';
+  const emptyMain = '<div class="live-alert empty">?꾩쭅 諛쒖깮??痍⑥냼???뚮┝???놁뒿?덈떎.</div>';
+  const emptyRecent = '<div class="live-alert empty">理쒓렐 ?뚮┝???놁뒿?덈떎.</div>';
   setHtml(el.alertsList, state.alerts.length ? state.alerts.map((item) => createAlertCard(item)).join('') : emptyMain);
   setHtml(el.recentAlertsList, state.alerts.length ? state.alerts.slice(0, 2).map((item) => createAlertCard(item, true)).join('') : emptyRecent);
   if (state.alerts[0]) {
@@ -362,7 +381,7 @@ function updateCountdown() {
       .sort((a, b) => a.date - b.date)[0];
 
     if (!next) {
-      setText(el.nextGameText, '예정된 잠실 두산 경기가 없습니다.');
+      setText(el.nextGameText, '?덉젙???좎떎 ?먯궛 寃쎄린媛 ?놁뒿?덈떎.');
       setText(el.countDays, '00');
       setText(el.countHours, '00');
       setText(el.countMinutes, '00');
@@ -377,7 +396,10 @@ function updateCountdown() {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    setText(el.nextGameText, `${next.game.awayTeam}전 · ${next.game.date} ${next.game.time} · ${next.game.stadium}`);
+    setText(
+      el.nextGameText,
+      `${next.game.awayTeam}전 · ${next.game.date} ${next.game.time} · ${formatReservationStart(next.game.reservationStart)}`
+    );
     setText(el.countDays, String(days).padStart(2, '0'));
     setText(el.countHours, String(hours).padStart(2, '0'));
     setText(el.countMinutes, String(minutes).padStart(2, '0'));
@@ -391,8 +413,8 @@ function updateCountdown() {
 function showBrowserNotification(alert) {
   if (isNativeApp() || !('Notification' in window) || Notification.permission !== 'granted') return;
 
-  const notification = new Notification(alert.title || '취소표 알림', {
-    body: alert.message || '좌석 변동이 감지되었습니다.'
+  const notification = new Notification(alert.title || '痍⑥냼???뚮┝', {
+    body: alert.message || '醫뚯꽍 蹂?숈씠 媛먯??섏뿀?듬땲??'
   });
   notification.onclick = () => {
     openTicketUrl(alert.ticketUrl || alert.game).catch(() => {});
@@ -406,7 +428,7 @@ async function ensureBrowserPermission() {
     if (localNotifications?.requestPermissions) {
       const permission = await localNotifications.requestPermissions();
       if (permission.display === 'granted') {
-        setPermissionStatus('안드로이드 로컬 알림 권한이 허용되었습니다.');
+        setPermissionStatus('?덈뱶濡쒖씠??濡쒖뺄 ?뚮┝ 沅뚰븳???덉슜?섏뿀?듬땲??');
       }
     }
     await registerNativePush(true);
@@ -414,43 +436,43 @@ async function ensureBrowserPermission() {
   }
 
   if (!('Notification' in window)) {
-    setPermissionStatus('이 브라우저는 알림 API를 지원하지 않습니다.');
+    setPermissionStatus('??釉뚮씪?곗????뚮┝ API瑜?吏?먰븯吏 ?딆뒿?덈떎.');
     return;
   }
 
   if (window.location.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-    setPermissionStatus('브라우저 알림은 https 또는 localhost 환경에서만 동작합니다.');
+    setPermissionStatus('釉뚮씪?곗? ?뚮┝? https ?먮뒗 localhost ?섍꼍?먯꽌留??숈옉?⑸땲??');
     return;
   }
 
   const result = await Notification.requestPermission();
-  if (result === 'granted') setPermissionStatus('브라우저 알림이 허용되었습니다.');
-  else if (result === 'denied') setPermissionStatus('브라우저 알림이 차단되었습니다.');
-  else setPermissionStatus('브라우저 알림 권한 요청이 보류되었습니다.');
+  if (result === 'granted') setPermissionStatus('釉뚮씪?곗? ?뚮┝???덉슜?섏뿀?듬땲??');
+  else if (result === 'denied') setPermissionStatus('釉뚮씪?곗? ?뚮┝??李⑤떒?섏뿀?듬땲??');
+  else setPermissionStatus('釉뚮씪?곗? ?뚮┝ 沅뚰븳 ?붿껌??蹂대쪟?섏뿀?듬땲??');
 }
 
 async function registerNativePush(fromButton = false) {
   const push = getPushPlugin();
   if (!push) {
-    if (fromButton) setPermissionStatus('현재는 APK 네이티브 푸시 환경이 아닙니다.');
+    if (fromButton) setPermissionStatus('?꾩옱??APK ?ㅼ씠?곕툕 ?몄떆 ?섍꼍???꾨떃?덈떎.');
     return;
   }
 
   if (!hasFirebasePushConfig()) {
     if (fromButton) {
-      setPermissionStatus('Firebase 미설정 상태입니다. 지금은 테스트용 로컬 알림만 사용할 수 있습니다.');
+      setPermissionStatus('Firebase 誘몄꽕???곹깭?낅땲?? 吏湲덉? ?뚯뒪?몄슜 濡쒖뺄 ?뚮┝留??ъ슜?????덉뒿?덈떎.');
     }
     return;
   }
 
   if (state.nativePushInitialized) {
-    setPermissionStatus('앱 푸시 등록이 이미 완료되었습니다.');
+    setPermissionStatus('???몄떆 ?깅줉???대? ?꾨즺?섏뿀?듬땲??');
     return;
   }
 
   const permissionResult = await push.requestPermissions();
   if (permissionResult.receive !== 'granted') {
-    setPermissionStatus('앱 푸시 권한이 허용되지 않았습니다.');
+    setPermissionStatus('???몄떆 沅뚰븳???덉슜?섏? ?딆븯?듬땲??');
     return;
   }
 
@@ -460,20 +482,20 @@ async function registerNativePush(fromButton = false) {
         method: 'POST',
         body: JSON.stringify({ token: token.value, platform: 'android' })
       });
-      setPermissionStatus('앱 푸시 등록이 완료되었습니다.');
+      setPermissionStatus('???몄떆 ?깅줉???꾨즺?섏뿀?듬땲??');
     } catch (error) {
-      setPermissionStatus(`푸시 토큰 등록 실패: ${error.message}`);
+      setPermissionStatus(`?몄떆 ?좏겙 ?깅줉 ?ㅽ뙣: ${error.message}`);
     }
   });
 
   push.addListener('registrationError', (error) => {
-    setPermissionStatus(`푸시 등록 오류: ${error.error || JSON.stringify(error)}`);
+    setPermissionStatus(`?몄떆 ?깅줉 ?ㅻ쪟: ${error.error || JSON.stringify(error)}`);
   });
 
   push.addListener('pushNotificationReceived', (notification) => {
     showInAppAlert({
-      title: notification.title || '취소표 알림',
-      message: notification.body || '좌석 변동이 감지되었습니다.',
+      title: notification.title || '痍⑥냼???뚮┝',
+      message: notification.body || '醫뚯꽍 蹂?숈씠 媛먯??섏뿀?듬땲??',
       createdAt: new Date().toISOString(),
       ticketUrl: notification.data?.ticketUrl || DEFAULT_TICKET_URL
     });
@@ -485,40 +507,40 @@ async function registerNativePush(fromButton = false) {
 
   await push.register();
   state.nativePushInitialized = true;
-  setPermissionStatus('앱 푸시 권한이 허용되었고 기기 등록을 진행 중입니다.');
+  setPermissionStatus('???몄떆 沅뚰븳???덉슜?섏뿀怨?湲곌린 ?깅줉??吏꾪뻾 以묒엯?덈떎.');
 }
 
 function syncPermissionStatus() {
   if (isNativeApp()) {
     if (hasFirebasePushConfig()) {
-      setText(el.enableAlertsBtn, '앱 푸시 권한 허용');
-      setPermissionStatus('APK에서는 브라우저 알림 대신 앱 푸시 권한을 사용합니다.');
+      setText(el.enableAlertsBtn, '???몄떆 沅뚰븳 ?덉슜');
+      setPermissionStatus('APK?먯꽌??釉뚮씪?곗? ?뚮┝ ??????몄떆 沅뚰븳???ъ슜?⑸땲??');
     } else {
-      setText(el.enableAlertsBtn, '알림 권한 허용');
-      setPermissionStatus('Firebase 없이도 테스트용 로컬 알림을 받을 수 있습니다.');
+      setText(el.enableAlertsBtn, '?뚮┝ 沅뚰븳 ?덉슜');
+      setPermissionStatus('Firebase ?놁씠???뚯뒪?몄슜 濡쒖뺄 ?뚮┝??諛쏆쓣 ???덉뒿?덈떎.');
     }
     return;
   }
 
   if (!('Notification' in window)) {
-    setPermissionStatus('이 브라우저는 Notification API를 지원하지 않습니다.');
+    setPermissionStatus('??釉뚮씪?곗???Notification API瑜?吏?먰븯吏 ?딆뒿?덈떎.');
     return;
   }
 
-  if (Notification.permission === 'granted') setPermissionStatus('브라우저 알림이 허용되어 있습니다.');
-  else if (Notification.permission === 'denied') setPermissionStatus('브라우저 알림이 차단되어 있습니다.');
-  else setPermissionStatus('브라우저 알림 권한이 아직 요청되지 않았습니다.');
+  if (Notification.permission === 'granted') setPermissionStatus('釉뚮씪?곗? ?뚮┝???덉슜?섏뼱 ?덉뒿?덈떎.');
+  else if (Notification.permission === 'denied') setPermissionStatus('釉뚮씪?곗? ?뚮┝??李⑤떒?섏뼱 ?덉뒿?덈떎.');
+  else setPermissionStatus('釉뚮씪?곗? ?뚮┝ 沅뚰븳???꾩쭅 ?붿껌?섏? ?딆븯?듬땲??');
 }
 
 function updateHealth(data) {
   state.health = data;
-  setText(el.serverStatus, data.ok ? '정상' : '오류');
+  setText(el.serverStatus, data.ok ? '?뺤긽' : '?ㅻ쪟');
   setText(el.lastRunAt, formatDateTime(data.lastRunAt));
   setText(el.watchedGames, String(data.watchedGames || 0));
   setText(el.alertCount, String(data.alerts || 0));
   setText(el.topbarUpdatedAt, formatDateTime(data.lastRunAt));
-  if (data.lastError) setBackendStatus(`백엔드 연결됨. 최근 오류: ${data.lastError}`);
-  else setBackendStatus('백엔드 연결이 정상입니다.');
+  if (data.lastError) setBackendStatus(`諛깆뿏???곌껐?? 理쒓렐 ?ㅻ쪟: ${data.lastError}`);
+  else setBackendStatus('諛깆뿏???곌껐???뺤긽?낅땲??');
 }
 
 async function loadHealth() {
@@ -551,12 +573,12 @@ async function hydrateDataAfterConnection() {
 function bindStream() {
   if (!state.apiBase) return;
   if (state.stream) state.stream.close();
-  setText(el.streamBadge, 'SSE 연결 시도 중');
+  setText(el.streamBadge, '\uC2E4\uC2DC\uAC04 \uC5F0\uACB0 \uC911');
   state.stream = new EventSource(`${state.apiBase}/api/stream`);
 
   state.stream.addEventListener('hello', () => {
-    setText(el.streamBadge, '실시간 연결됨');
-    setBackendStatus('실시간 스트림 연결이 정상입니다.');
+    setText(el.streamBadge, '\uC2E4\uC2DC\uAC04 \uC5F0\uACB0\uB428');
+    setBackendStatus('\uC2E4\uC2DC\uAC04 \uC2A4\uD2B8\uB9BC \uC5F0\uACB0\uC774 \uC815\uC0C1\uC785\uB2C8\uB2E4.');
   });
 
   state.stream.addEventListener('alert', async (event) => {
@@ -570,8 +592,8 @@ function bindStream() {
   });
 
   state.stream.onerror = () => {
-    setText(el.streamBadge, '실시간 연결 실패');
-    setBackendStatus('실시간 연결 실패: 백엔드에 접속할 수 없습니다.');
+    setText(el.streamBadge, '?ㅼ떆媛??곌껐 ?ㅽ뙣');
+    setBackendStatus('?ㅼ떆媛??곌껐 ?ㅽ뙣: 諛깆뿏?쒖뿉 ?묒냽?????놁뒿?덈떎.');
   };
 }
 
@@ -579,15 +601,15 @@ async function refresh() {
   try {
     await Promise.all([loadHealth(), loadGames(), loadAlerts()]);
   } catch (error) {
-    setText(el.serverStatus, '연결 실패');
+    setText(el.serverStatus, '?곌껐 ?ㅽ뙣');
     setText(el.watchedGames, '0');
     setText(el.alertCount, '0');
-    setText(el.topbarUpdatedAt, '연결 실패');
-    setHtml(el.homeGamesList, '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>');
-    setHtml(el.scheduleList, '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>');
-    setHtml(el.alertsList, '<div class="live-alert empty">백엔드에 연결되어야 알림 내역이 표시됩니다.</div>');
-    setHtml(el.recentAlertsList, '<div class="live-alert empty">백엔드 연결 후 최근 알림이 보입니다.</div>');
-    setBackendStatus(`백엔드 연결 실패: ${error.message}`);
+    setText(el.topbarUpdatedAt, '?곌껐 ?ㅽ뙣');
+    setHtml(el.homeGamesList, '<div class="live-alert empty">諛깆뿏?쒖뿉 ?곌껐?섏뼱??寃쎄린 ?쇱젙???먮룞?쇰줈 ?쒖떆?⑸땲??</div>');
+    setHtml(el.scheduleList, '<div class="live-alert empty">諛깆뿏?쒖뿉 ?곌껐?섏뼱??寃쎄린 ?쇱젙???먮룞?쇰줈 ?쒖떆?⑸땲??</div>');
+    setHtml(el.alertsList, '<div class="live-alert empty">諛깆뿏?쒖뿉 ?곌껐?섏뼱???뚮┝ ?댁뿭???쒖떆?⑸땲??</div>');
+    setHtml(el.recentAlertsList, '<div class="live-alert empty">諛깆뿏???곌껐 ??理쒓렐 ?뚮┝??蹂댁엯?덈떎.</div>');
+    setBackendStatus(`諛깆뿏???곌껐 ?ㅽ뙣: ${error.message}`);
     throw error;
   }
 }
@@ -601,11 +623,11 @@ async function manualRun() {
   try {
     const result = await api('/api/monitor/run', { method: 'POST', body: '{}' });
     if (result.error) {
-      setBackendStatus(`수동 점검은 실행됐지만 서버 오류가 있습니다: ${result.error}`);
+      setBackendStatus(`?섎룞 ?먭?? ?ㅽ뻾?먯?留??쒕쾭 ?ㅻ쪟媛 ?덉뒿?덈떎: ${result.error}`);
     }
     await refresh();
   } catch (error) {
-    setBackendStatus(`수동 점검 실패: ${error.message}`);
+    setBackendStatus(`?섎룞 ?먭? ?ㅽ뙣: ${error.message}`);
   }
 }
 
@@ -615,18 +637,18 @@ async function restorePreviousConnection(previousApiBase) {
     try {
       await initializeConnectionFlow();
     } catch (error) {
-      setBackendStatus(`기존 서버에도 다시 연결하지 못했습니다: ${error.message}`);
+      setBackendStatus(`湲곗〈 ?쒕쾭?먮룄 ?ㅼ떆 ?곌껐?섏? 紐삵뻽?듬땲?? ${error.message}`);
     }
     return;
   }
 
-  setText(el.streamBadge, '대기 중');
+  setText(el.streamBadge, '\uB300\uAE30 \uC911');
 }
 
 async function saveApiBase() {
   const value = DEPLOYED_API_BASE;
   if (!value) {
-    setBackendStatus('배포 백엔드 주소가 아직 앱에 설정되지 않았습니다.');
+    setBackendStatus('諛고룷 諛깆뿏??二쇱냼媛 ?꾩쭅 ?깆뿉 ?ㅼ젙?섏? ?딆븯?듬땲??');
     return;
   }
 
@@ -638,14 +660,14 @@ async function saveApiBase() {
 
   el.saveApiBaseBtn.disabled = true;
   state.apiBase = value;
-  setBackendStatus('백엔드 연결 확인 중입니다.');
+  setBackendStatus('諛깆뿏???곌껐 ?뺤씤 以묒엯?덈떎.');
 
   try {
     await initializeConnectionFlow();
-    setBackendStatus('백엔드 연결이 확인되었고 일정/알림 데이터를 바로 불러왔습니다.');
+    setBackendStatus('諛깆뿏???곌껐???뺤씤?섏뿀怨??쇱젙/?뚮┝ ?곗씠?곕? 諛붾줈 遺덈윭?붿뒿?덈떎.');
   } catch (error) {
     await restorePreviousConnection(previousApiBase);
-    setBackendStatus(`백엔드 연결 검증 실패: ${error.message}`);
+    setBackendStatus(`諛깆뿏???곌껐 寃利??ㅽ뙣: ${error.message}`);
   } finally {
     el.saveApiBaseBtn.disabled = false;
   }
@@ -655,15 +677,15 @@ function buildLocalTestAlert() {
   return {
     id: `${Date.now()}-local-test`,
     createdAt: new Date().toISOString(),
-    title: '로컬 테스트 알림',
-    message: '알림 클릭 시 인터파크 예매 화면으로 이동합니다.',
+    title: '\uB85C\uCEEC \uD14C\uC2A4\uD2B8 \uC54C\uB9BC',
+    message: '\uC54C\uB9BC\uC744 \uB20C\uB7EC \uC571 \uB0B4 \uC54C\uB9BC \uD654\uBA74\uC73C\uB85C \uC774\uB3D9\uD574 \uBCF4\uC138\uC694.',
     ticketUrl: DEFAULT_TICKET_URL,
     game: {
       date: new Date().toISOString().slice(0, 10),
       time: '18:30',
-      homeTeam: '두산',
-      awayTeam: '상대팀',
-      stadium: '잠실야구장'
+      homeTeam: '\uB450\uC0B0',
+      awayTeam: '\uC0C1\uB300\uD300',
+      stadium: '\uC7A0\uC2E4\uC57C\uAD6C\uC7A5'
     },
     seatResult: {
       total: 2,
@@ -680,12 +702,12 @@ function runLocalTestNotification(reason) {
   showNativeLocalNotification(alert).then((shown) => {
     if (!shown) showBrowserNotification(alert);
   });
-  setBackendStatus(`${reason} 앱 내 카드와 시스템 알림을 함께 시도했습니다.`);
+  setBackendStatus(`${reason} ????移대뱶? ?쒖뒪???뚮┝???④퍡 ?쒕룄?덉뒿?덈떎.`);
 }
 
 async function sendTestNotification() {
   if (!canUseRemoteTestNotification()) {
-    runLocalTestNotification('Firebase 미설정 상태라 서버 푸시 대신 앱 내부 로컬 테스트 알림으로 검증했습니다.');
+    runLocalTestNotification('Firebase 誘몄꽕???곹깭???쒕쾭 ?몄떆 ??????대? 濡쒖뺄 ?뚯뒪???뚮┝?쇰줈 寃利앺뻽?듬땲??');
     return;
   }
 
@@ -697,11 +719,11 @@ async function sendTestNotification() {
     if (result.alert) {
       prependAlert(result.alert);
       showBrowserNotification(result.alert);
-      setBackendStatus('서버 테스트 알림을 발송했습니다.');
+      setBackendStatus('?쒕쾭 ?뚯뒪???뚮┝??諛쒖넚?덉뒿?덈떎.');
       return;
     }
   } catch (error) {
-    runLocalTestNotification(`서버 테스트 알림 실패, 로컬 알림으로 대체: ${error.message}`);
+    runLocalTestNotification(`?쒕쾭 ?뚯뒪???뚮┝ ?ㅽ뙣, 濡쒖뺄 ?뚮┝?쇰줈 ?泥? ${error.message}`);
   }
 }
 
@@ -751,12 +773,12 @@ async function init() {
     });
   }
 
-  setBackendStatus(state.apiBase ? '배포 백엔드 연결을 준비 중입니다.' : '배포 백엔드 주소가 아직 설정되지 않았습니다.');
+  setBackendStatus(state.apiBase ? '諛고룷 諛깆뿏???곌껐??以鍮?以묒엯?덈떎.' : '諛고룷 諛깆뿏??二쇱냼媛 ?꾩쭅 ?ㅼ젙?섏? ?딆븯?듬땲??');
 
   try {
     await initDataFlow();
   } catch (error) {
-    // 상태 문구로 안내
+    // ?곹깭 臾멸뎄濡??덈궡
   }
 
   if (hasFirebasePushConfig()) {
@@ -765,6 +787,7 @@ async function init() {
 }
 
 init().catch((error) => {
-  setText(el.serverStatus, `오류: ${error.message}`);
-  setBackendStatus(`초기화 실패: ${error.message}`);
+  setText(el.serverStatus, `?ㅻ쪟: ${error.message}`);
+  setBackendStatus(`珥덇린???ㅽ뙣: ${error.message}`);
 });
+
