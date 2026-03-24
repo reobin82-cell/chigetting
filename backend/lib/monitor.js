@@ -50,11 +50,9 @@ function buildDefaultReservationStart(game) {
   return `${reservationYear}-${reservationMonth}-${reservationDay}T11:00:00+09:00`;
 }
 
-function getReservationStartDate(game) {
-  const value = String(game?.reservationStart || '').trim();
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+function isDailyMonitoringWindowOpen(now = new Date()) {
+  const localNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  return localNow.getHours() >= 11;
 }
 
 function gameDateObject(dateString, time = '18:00') {
@@ -479,13 +477,13 @@ async function runMonitorCycle(config, state, hooks = {}) {
 
   const freshAlerts = [];
 
+  if (!isDailyMonitoringWindowOpen()) {
+    state.lastRunAt = new Date().toISOString();
+    return { games, freshAlerts };
+  }
+
   for (const game of games) {
     try {
-      const reservationStartDate = getReservationStartDate(game);
-      if (reservationStartDate && Date.now() < reservationStartDate.getTime()) {
-        continue;
-      }
-
       const html = await fetchText(game.ticketUrl || config.defaultGameUrl || DEFAULT_GAME_URL, {
         headers: {
           'User-Agent': 'Mozilla/5.0',

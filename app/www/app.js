@@ -565,7 +565,7 @@ function createGameCard(game) {
       <div class="match-footer">
         <div class="match-footer-main">
           <div class="monitoring-state">${seatPreference}연석 이상 알림 중</div>
-          <div class="reminder-helper">취소표 감시는 공식 예매 시작 시각부터 진행합니다.</div>
+          <div class="reminder-helper">취소표 감시는 매일 오전 11시부터 진행합니다.</div>
         </div>
         <button class="secondary-btn" type="button" data-open-ticket="${ticketUrl}">인터파크 열기</button>
       </div>
