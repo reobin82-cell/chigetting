@@ -1,6 +1,9 @@
 ﻿const DEPLOYED_API_BASE = normalizeApiBase(window.__APP_CONFIG__?.apiBase || '');
 const DEFAULT_TICKET_URL = 'https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004';
 const RESERVATION_REMINDER_STORAGE_KEY = 'reservation-reminder-selections-v1';
+const HEALTH_CACHE_KEY = 'chigetting-health-cache-v1';
+const GAMES_CACHE_KEY = 'chigetting-games-cache-v1';
+const ALERTS_CACHE_KEY = 'chigetting-alerts-cache-v1';
 
 const state = {
   apiBase: '',
@@ -12,6 +15,7 @@ const state = {
   preferredConsecutiveSeats: 3,
   reminderSelections: {},
   nextGameTimer: null,
+  reconnectTimer: null,
   interparkClockTimer: null,
   pendingAlertOpen: null
 };
@@ -102,6 +106,23 @@ function setText(node, text) {
 
 function setHtml(node, html) {
   if (node) node.innerHTML = html;
+}
+
+function readCachedJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function writeCachedJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // 저장 실패는 무시하고 실시간 흐름을 우선한다.
+  }
 }
 
 function escapeHtml(value = '') {
@@ -268,6 +289,51 @@ function renderSeatOptions() {
     button.classList.toggle('active', Number(button.dataset.seatOption) === preferred);
   });
   setText(el.seatOptionHint, `${preferred}연석 이상 감지되면 알림을 보냅니다.`);
+}
+
+function restoreCachedState() {
+  const cachedHealth = readCachedJson(HEALTH_CACHE_KEY, null);
+  const cachedGames = readCachedJson(GAMES_CACHE_KEY, []);
+  const cachedAlerts = readCachedJson(ALERTS_CACHE_KEY, []);
+
+  if (cachedHealth?.preferredConsecutiveSeats) {
+    state.preferredConsecutiveSeats = Number(cachedHealth.preferredConsecutiveSeats || state.preferredConsecutiveSeats || 3);
+    renderSeatOptions();
+  }
+
+  if (Array.isArray(cachedGames) && cachedGames.length) {
+    state.games = cachedGames;
+    renderGames();
+    updateCountdown();
+  }
+
+  if (Array.isArray(cachedAlerts) && cachedAlerts.length) {
+    state.alerts = cachedAlerts;
+    renderAlerts();
+    renderStats();
+  }
+
+  if (cachedHealth && (cachedGames.length || cachedAlerts.length)) {
+    setText(el.topbarUpdatedAt, formatDateTime(cachedHealth.lastRunAt || cachedHealth.serverTime));
+    setText(el.interparkServerTime, formatDateTime(cachedHealth.interparkServerTime || cachedHealth.serverTime));
+    setText(el.serverStatus, '재연결 중');
+    setText(el.watchedGames, String(cachedHealth.watchedGames || cachedGames.length || 0));
+    setText(el.alertCount, String(cachedHealth.alerts || cachedAlerts.length || 0));
+    setBackendStatus('최근 저장된 데이터를 먼저 표시하고 있습니다. 서버 연결을 다시 시도합니다.');
+  }
+}
+
+function scheduleReconnect() {
+  if (state.reconnectTimer || !state.apiBase) return;
+  state.reconnectTimer = setTimeout(async () => {
+    state.reconnectTimer = null;
+    try {
+      await refresh();
+      bindStream();
+    } catch (error) {
+      scheduleReconnect();
+    }
+  }, 15000);
 }
 
 function loadReminderSelections() {
@@ -838,6 +904,7 @@ function syncPermissionStatus() {
 }
 function updateHealth(data) {
   state.health = data;
+  writeCachedJson(HEALTH_CACHE_KEY, data);
   state.preferredConsecutiveSeats = Number(data.preferredConsecutiveSeats || state.preferredConsecutiveSeats || 3);
   setText(el.serverStatus, data.ok ? '정상' : '오류');
   setText(el.lastRunAt, formatDateTime(data.lastRunAt));
@@ -861,6 +928,7 @@ async function loadHealth() {
 async function loadGames() {
   const data = await api('/api/games');
   state.games = data.games || [];
+  writeCachedJson(GAMES_CACHE_KEY, state.games);
   renderGames();
   updateCountdown();
 }
@@ -868,6 +936,7 @@ async function loadGames() {
 async function loadAlerts() {
   const data = await api('/api/alerts');
   state.alerts = data.alerts || [];
+  writeCachedJson(ALERTS_CACHE_KEY, state.alerts);
   renderAlerts();
   renderStats();
 }
@@ -905,23 +974,33 @@ function bindStream() {
   state.stream.onerror = () => {
     setText(el.streamBadge, '실시간 연결 실패');
     setBackendStatus('실시간 연결 실패: 백엔드에 접속할 수 없습니다.');
+    scheduleReconnect();
   };
 }
 
 async function refresh() {
   try {
     await Promise.all([loadHealth(), loadGames(), loadAlerts()]);
+    if (state.reconnectTimer) {
+      clearTimeout(state.reconnectTimer);
+      state.reconnectTimer = null;
+    }
   } catch (error) {
-    setText(el.serverStatus, '연결 실패');
-    setText(el.watchedGames, '0');
-    setText(el.alertCount, '0');
-    setText(el.topbarUpdatedAt, '연결 실패');
-    setText(el.interparkServerTime, '확인 실패');
-    setHtml(el.homeGamesList, '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>');
-    setHtml(el.scheduleList, '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>');
-    setHtml(el.alertsList, '<div class="live-alert empty">백엔드에 연결되어야 알림 내역이 표시됩니다.</div>');
-    setHtml(el.recentAlertsList, '<div class="live-alert empty">백엔드 연결 후 최근 알림이 보입니다.</div>');
-    setBackendStatus(`백엔드 연결 실패: ${error.message}`);
+    setText(el.serverStatus, '연결 지연');
+    if (!state.games.length && !state.alerts.length) {
+      setText(el.watchedGames, '0');
+      setText(el.alertCount, '0');
+      setText(el.topbarUpdatedAt, '연결 실패');
+      setText(el.interparkServerTime, '확인 실패');
+      setHtml(el.homeGamesList, '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>');
+      setHtml(el.scheduleList, '<div class="live-alert empty">백엔드에 연결되어야 경기 일정이 자동으로 표시됩니다.</div>');
+      setHtml(el.alertsList, '<div class="live-alert empty">백엔드에 연결되어야 알림 내역이 표시됩니다.</div>');
+      setHtml(el.recentAlertsList, '<div class="live-alert empty">백엔드 연결 후 최근 알림이 보입니다.</div>');
+      setBackendStatus(`백엔드 연결 실패: ${error.message}`);
+    } else {
+      setBackendStatus(`백엔드 응답이 지연되어 최근 저장 데이터를 표시 중입니다: ${error.message}`);
+    }
+    scheduleReconnect();
     throw error;
   }
 }
@@ -1084,6 +1163,7 @@ function bindTabEvents() {
 async function init() {
   state.apiBase = inferDefaultApiBase();
   state.reminderSelections = loadReminderSelections();
+  restoreCachedState();
   if (el.apiBaseInput) {
     el.apiBaseInput.value = '';
   }
