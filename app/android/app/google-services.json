@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "327544367661",
+    "project_id": "chigetting-d31d3",
+    "storage_bucket": "chigetting-d31d3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327544367661:android:4a627f84b1ec54158be6a4",
+        "android_client_info": {
+          "package_name": "com.stans.doosanjamsilalert"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRNLuxMKZAfXiIcg10fRAvqsS8DeOVrGc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
