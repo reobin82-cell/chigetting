@@ -9,7 +9,7 @@ const state = {
   games: [],
   alerts: [],
   health: null,
-  preferredConsecutiveSeats: 2,
+  preferredConsecutiveSeats: 3,
   reminderSelections: {},
   nextGameTimer: null,
   interparkClockTimer: null,
@@ -263,7 +263,7 @@ function formatAlertMessage(alert = {}) {
 }
 
 function renderSeatOptions() {
-  const preferred = Number(state.preferredConsecutiveSeats || 2);
+  const preferred = Number(state.preferredConsecutiveSeats || 3);
   el.seatOptionButtons.forEach((button) => {
     button.classList.toggle('active', Number(button.dataset.seatOption) === preferred);
   });
@@ -516,7 +516,7 @@ function openAlertInsideApp(alert) {
 }
 
 function renderStats() {
-  const preferred = Number(state.preferredConsecutiveSeats || 2);
+  const preferred = Number(state.preferredConsecutiveSeats || 3);
   const consecutiveAlerts = state.alerts.filter((item) => (item.seatResult?.consecutive || 0) >= preferred).length;
 
   setText(el.statPolls, String(state.games.length));
@@ -530,7 +530,7 @@ function createGameCard(game) {
   const reservationHero = formatReservationStartHero(game);
   const awayTeam = formatTeamName(game.awayTeam || '');
   const homeTeam = formatTeamName(game.homeTeam || '');
-  const seatPreference = Number(state.preferredConsecutiveSeats || 2);
+  const seatPreference = Number(state.preferredConsecutiveSeats || 3);
   const ticketUrl = buildInterparkUrl(game);
 
   return `
@@ -838,7 +838,7 @@ function syncPermissionStatus() {
 }
 function updateHealth(data) {
   state.health = data;
-  state.preferredConsecutiveSeats = Number(data.preferredConsecutiveSeats || state.preferredConsecutiveSeats || 2);
+  state.preferredConsecutiveSeats = Number(data.preferredConsecutiveSeats || state.preferredConsecutiveSeats || 3);
   setText(el.serverStatus, data.ok ? '정상' : '오류');
   setText(el.lastRunAt, formatDateTime(data.lastRunAt));
   setText(el.watchedGames, String(data.watchedGames || 0));
@@ -986,7 +986,7 @@ async function saveApiBase() {
 }
 
 function buildLocalTestAlert() {
-  const preferred = Number(state.preferredConsecutiveSeats || 2);
+  const preferred = Number(state.preferredConsecutiveSeats || 3);
   return {
     id: `${Date.now()}-local-test`,
     createdAt: new Date().toISOString(),

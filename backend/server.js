@@ -17,7 +17,7 @@ config.port = Number(process.env.PORT || config.port || 8787);
 config.monitorIntervalSec = Number(process.env.MONITOR_INTERVAL_SEC || config.monitorIntervalSec || 20);
 config.daysAhead = Number(process.env.DAYS_AHEAD || config.daysAhead || 21);
 config.maxConcurrentGames = Number(process.env.MAX_CONCURRENT_GAMES || config.maxConcurrentGames || 8);
-config.preferredConsecutiveSeats = Number(process.env.PREFERRED_CONSECUTIVE_SEATS || config.preferredConsecutiveSeats || 2);
+config.preferredConsecutiveSeats = Number(process.env.PREFERRED_CONSECUTIVE_SEATS || config.preferredConsecutiveSeats || 3);
 config.kboEndpoint = process.env.KBO_ENDPOINT || config.kboEndpoint;
 config.teamTicketUrl = process.env.TEAM_TICKET_URL || config.teamTicketUrl;
 config.defaultGameUrl = process.env.DEFAULT_GAME_URL || config.defaultGameUrl;
@@ -235,7 +235,7 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/api/test/alert' && req.method === 'POST') {
     try {
       const state = readState(config.dataFile);
-      const preferredSeats = Number(config.preferredConsecutiveSeats || 2);
+      const preferredSeats = Number(config.preferredConsecutiveSeats || 3);
       const alert = {
         id: `${Date.now()}-test`,
         key: `test_${Date.now()}`,
