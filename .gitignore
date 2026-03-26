@@ -3,6 +3,7 @@ node_modules/
 android-sdk/
 tools/
 backend/config.json
+backend/firebase-service-account.json
 backend/data/state.json
 app/android/.gradle/
 app/android/local.properties
