@@ -9,5 +9,8 @@
   "defaultGameUrl": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004",
   "pushProvider": "none",
   "fcmServerKey": "",
+  "firebaseProjectId": "",
+  "firebaseServiceAccountPath": "",
+  "firebaseServiceAccountJson": "",
   "dataFile": "./backend/data/state.json"
 }

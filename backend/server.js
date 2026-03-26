@@ -23,6 +23,9 @@ config.teamTicketUrl = process.env.TEAM_TICKET_URL || config.teamTicketUrl;
 config.defaultGameUrl = process.env.DEFAULT_GAME_URL || config.defaultGameUrl;
 config.pushProvider = process.env.PUSH_PROVIDER || config.pushProvider || 'none';
 config.fcmServerKey = process.env.FCM_SERVER_KEY || config.fcmServerKey || '';
+config.firebaseProjectId = process.env.FIREBASE_PROJECT_ID || config.firebaseProjectId || '';
+config.firebaseServiceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || config.firebaseServiceAccountPath || '';
+config.firebaseServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || config.firebaseServiceAccountJson || '';
 config.dataFile = path.resolve(rootDir, process.env.DATA_FILE || config.dataFile || './backend/data/state.json');
 ensureStateFile(config.dataFile);
 
