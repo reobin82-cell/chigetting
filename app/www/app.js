@@ -70,6 +70,56 @@ function getLocalNotificationsPlugin() {
   return window.Capacitor?.Plugins?.LocalNotifications || window.Capacitor?.LocalNotifications || null;
 }
 
+function getExactAlarmPermissionState(result) {
+  if (!result || typeof result !== 'object') return '';
+  return String(
+    result.exact_alarm ||
+    result.exactAlarm ||
+    result.display ||
+    result.value ||
+    result.state ||
+    ''
+  ).toLowerCase();
+}
+
+async function ensureExactAlarmPermission(localNotifications, interactive = false) {
+  if (!isNativeApp() || !localNotifications?.checkExactNotificationSetting) {
+    return true;
+  }
+
+  const current = getExactAlarmPermissionState(await localNotifications.checkExactNotificationSetting());
+  if (!current || current === 'granted') {
+    return true;
+  }
+
+  if (interactive && localNotifications.changeExactNotificationSetting) {
+    setPermissionStatus('정확한 예약 알림 권한이 필요해 설정 화면을 엽니다.');
+    const changed = await localNotifications.changeExactNotificationSetting();
+    const next = getExactAlarmPermissionState(changed);
+    if (!next || next === 'granted') {
+      return true;
+    }
+  }
+
+  throw new Error('정확한 예약 알림 권한이 꺼져 있습니다. 앱 설정에서 정확한 알람을 허용해 주세요.');
+}
+
+async function syncExactAlarmPermissionStatus() {
+  const localNotifications = getLocalNotificationsPlugin();
+  if (!isNativeApp() || !localNotifications?.checkExactNotificationSetting) {
+    return;
+  }
+
+  try {
+    const current = getExactAlarmPermissionState(await localNotifications.checkExactNotificationSetting());
+    if (current && current !== 'granted') {
+      setPermissionStatus('일반 알림 권한은 허용되었지만 정확한 예약 알림 권한이 꺼져 있습니다.');
+    }
+  } catch (error) {
+    // 정확한 알람 상태 확인 실패는 무시
+  }
+}
+
 function extractNotificationTicketUrl(payload) {
   return (
     payload?.notification?.extra?.ticketUrl ||
@@ -390,11 +440,14 @@ async function scheduleReservationReminder(game, minutes) {
     }
   }
 
+  await ensureExactAlarmPermission(localNotifications, true);
+
   const reservationDate = getReservationDate(game);
   if (!reservationDate) {
     throw new Error('예매 시작 시간을 아직 확인하지 못했습니다.');
   }
 
+  const notificationId = buildReminderNotificationId(game, minutes);
   const triggerAt = new Date(reservationDate.getTime() - (minutes * 60 * 1000));
   if (triggerAt.getTime() <= Date.now()) {
     throw new Error(`${minutes}분 전 알림을 설정하기에는 시간이 이미 지났습니다.`);
@@ -403,7 +456,7 @@ async function scheduleReservationReminder(game, minutes) {
   await localNotifications.schedule({
     notifications: [
       {
-        id: buildReminderNotificationId(game, minutes),
+        id: notificationId,
         title: `${formatTeamName(game.awayTeam)}전 예매 ${minutes}분 전`,
         body: `${formatReservationStartHero(game)} 예매가 곧 시작됩니다.`,
         schedule: { at: triggerAt, allowWhileIdle: true },
@@ -416,6 +469,15 @@ async function scheduleReservationReminder(game, minutes) {
       }
     ]
   });
+
+  if (localNotifications.getPending) {
+    const pending = await localNotifications.getPending();
+    const isRegistered = Array.isArray(pending.notifications)
+      && pending.notifications.some((item) => Number(item.id) === notificationId);
+    if (!isRegistered) {
+      throw new Error('예약 알림 등록을 확인하지 못했습니다. 정확한 알람 권한을 다시 확인해 주세요.');
+    }
+  }
 }
 
 async function cancelReservationReminder(game, minutes) {
@@ -799,7 +861,8 @@ async function ensureBrowserPermission() {
     if (localNotifications?.requestPermissions) {
       const permission = await localNotifications.requestPermissions();
       if (permission.display === 'granted') {
-        setPermissionStatus('안드로이드 로컬 알림 권한이 허용되었습니다.');
+        await ensureExactAlarmPermission(localNotifications, true);
+        setPermissionStatus('안드로이드 로컬 알림 권한과 정확한 예약 알림 권한이 준비되었습니다.');
       }
     }
     await registerNativePush(true);
@@ -890,6 +953,7 @@ function syncPermissionStatus() {
       setText(el.enableAlertsBtn, '알림 권한 허용');
       setPermissionStatus('Firebase 없이도 테스트용 로컬 알림을 받을 수 있습니다.');
     }
+    syncExactAlarmPermissionStatus();
     return;
   }
 
