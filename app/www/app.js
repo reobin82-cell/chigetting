@@ -143,7 +143,12 @@ function hasFirebasePushConfig() {
     return false;
   }
 
-  return Boolean(getPushPlugin());
+  const pluginAvailable = window.Capacitor?.isPluginAvailable?.('PushNotifications');
+  if (typeof pluginAvailable === 'boolean') {
+    return pluginAvailable;
+  }
+
+  return true;
 }
 
 function canUseRemoteTestNotification() {
