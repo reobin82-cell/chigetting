@@ -70,6 +70,10 @@ function getLocalNotificationsPlugin() {
   return window.Capacitor?.Plugins?.LocalNotifications || window.Capacitor?.LocalNotifications || null;
 }
 
+function getAppLauncherPlugin() {
+  return window.Capacitor?.Plugins?.AppLauncher || window.Capacitor?.AppLauncher || null;
+}
+
 function getExactAlarmPermissionState(result) {
   if (!result || typeof result !== 'object') return '';
   return String(
@@ -553,8 +557,22 @@ function buildInterparkUrl(gameOrUrl) {
   return gameOrUrl.ticketUrl || DEFAULT_TICKET_URL;
 }
 
+function buildInterparkAppUrl(gameOrUrl) {
+  const webUrl = buildInterparkUrl(gameOrUrl);
+  return `interparkticket://?url=${encodeURIComponent(webUrl)}`;
+}
+
 async function openTicketUrl(gameOrUrl) {
   const url = buildInterparkUrl(gameOrUrl);
+  const appLauncher = getAppLauncherPlugin();
+  if (isNativeApp() && appLauncher?.openUrl) {
+    try {
+      await appLauncher.openUrl({ url: buildInterparkAppUrl(gameOrUrl) });
+      return;
+    } catch (error) {
+      // 앱 딥링크 실패 시 웹 링크로 fallback
+    }
+  }
   const browser = getBrowserPlugin();
   if (browser?.open) {
     await browser.open({ url });
