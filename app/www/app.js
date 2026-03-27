@@ -135,7 +135,15 @@ function extractNotificationTicketUrl(payload) {
 }
 
 function hasFirebasePushConfig() {
-  return Boolean(window.__HAS_FIREBASE_CONFIG__);
+  if (Boolean(window.__HAS_FIREBASE_CONFIG__)) {
+    return true;
+  }
+
+  if (!isNativeApp()) {
+    return false;
+  }
+
+  return Boolean(getPushPlugin());
 }
 
 function canUseRemoteTestNotification() {
